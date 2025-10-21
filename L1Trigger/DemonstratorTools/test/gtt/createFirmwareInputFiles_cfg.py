@@ -69,9 +69,9 @@ process = cms.Process("GTTFileWriter")
 
 #process.load('Configuration.Geometry.GeometryExtended2026D88Reco_cff')
 #process.load('Configuration.Geometry.GeometryExtended2026D88_cff')
-# Use D98 geometry
-process.load('Configuration.Geometry.GeometryExtended2026D98Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D98_cff')
+# was D98
+process.load('Configuration.Geometry.GeometryExtended2026D110Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D110_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag

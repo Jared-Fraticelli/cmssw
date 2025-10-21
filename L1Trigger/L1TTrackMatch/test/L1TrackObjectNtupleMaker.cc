@@ -270,6 +270,7 @@ private:
   // tree & branches for mini-ntuple
   bool available_;  // ROOT file for histograms is open.
   TTree* eventTree;
+  TTree* w3piTree;
 
   // primary vertex
   std::vector<float>* m_pv_L1reco;
@@ -412,6 +413,7 @@ private:
   std::vector<int>* m_matchtrk_dhits;
   std::vector<int>* m_matchtrk_seed;
   std::vector<int>* m_matchtrk_hitpattern;
+  std::vector<int>* m_matchtrk_charge;
 
   // *L1 track* properties if m_tp_nmatch > 0 (extended)
   std::vector<float>* m_matchtrkExt_pt;
@@ -602,6 +604,10 @@ private:
   std::vector<int>* m_tp_all_nstublayers;
   std::vector<int>* m_tp_all_cut_nstubs;
   std::vector<int>* m_tp_all_cut_nstublayers;
+  std::vector<int>* m_tp_triplet_nstubs;
+  std::vector<int>* m_tp_triplet_nstublayers;
+  std::vector<int>* m_tp_triplet_cut_nstubs;
+  std::vector<int>* m_tp_triplet_cut_nstublayers;
 
 
   // W3Pi gen-level quantities
@@ -950,6 +956,7 @@ void L1TrackObjectNtupleMaker::endJob() {
   delete m_matchtrk_lhits;
   delete m_matchtrk_seed;
   delete m_matchtrk_hitpattern;
+  delete m_matchtrk_charge;
 
   delete m_matchtrkExt_pt;
   delete m_matchtrkExt_eta;
@@ -1098,8 +1105,12 @@ void L1TrackObjectNtupleMaker::endJob() {
   delete m_triplet_tp_max_nstublayers;
   delete m_tp_all_nstubs;
   delete m_tp_all_nstublayers;
-  delete m_tp_all_nstubs;
-  delete m_tp_all_nstublayers;
+  delete m_tp_all_cut_nstubs;
+  delete m_tp_all_cut_nstublayers;
+  delete m_tp_triplet_nstubs;
+  delete m_tp_triplet_nstublayers;
+  delete m_tp_triplet_cut_nstubs;
+  delete m_tp_triplet_cut_nstublayers;
 
   delete m_trkfastjet_eta;
   delete m_trkfastjet_vz;
@@ -1281,6 +1292,7 @@ void L1TrackObjectNtupleMaker::beginJob() {
   m_matchtrk_lhits = new std::vector<int>;
   m_matchtrk_seed = new std::vector<int>;
   m_matchtrk_hitpattern = new std::vector<int>;
+  m_matchtrk_charge = new std::vector<int>;
 
   m_matchtrkExt_pt = new std::vector<float>;
   m_matchtrkExt_eta = new std::vector<float>;
@@ -1429,6 +1441,10 @@ void L1TrackObjectNtupleMaker::beginJob() {
   m_tp_all_nstublayers = new std::vector<int>;
   m_tp_all_cut_nstubs = new std::vector<int>;
   m_tp_all_cut_nstublayers = new std::vector<int>;
+  m_tp_triplet_nstubs = new std::vector<int>;
+  m_tp_triplet_nstublayers = new std::vector<int>;
+  m_tp_triplet_cut_nstubs = new std::vector<int>;
+  m_tp_triplet_cut_nstublayers = new std::vector<int>;
 
   m_trkjetem_pt = new std::vector<float>;
   m_trkjetem_phi = new std::vector<float>;
@@ -1605,6 +1621,7 @@ void L1TrackObjectNtupleMaker::beginJob() {
     eventTree->Branch("matchtrk_dhits", &m_matchtrk_dhits);
     eventTree->Branch("matchtrk_seed", &m_matchtrk_seed);
     eventTree->Branch("matchtrk_hitpattern", &m_matchtrk_hitpattern);
+    eventTree->Branch("matchtrk_charge", &m_matchtrk_charge);
   }
 
   if (Displaced == "Displaced" || Displaced == "Both") {
@@ -1780,6 +1797,10 @@ void L1TrackObjectNtupleMaker::beginJob() {
     eventTree->Branch("tp_all_nstublayers", &m_tp_all_nstublayers);
     eventTree->Branch("tp_all_cut_nstubs", &m_tp_all_cut_nstubs);
     eventTree->Branch("tp_all_cut_nstublayers", &m_tp_all_cut_nstublayers);
+    eventTree->Branch("tp_triplet_nstubs", &m_tp_triplet_nstubs);
+    eventTree->Branch("tp_triplet_nstublayers", &m_tp_triplet_nstublayers);
+    eventTree->Branch("tp_triplet_cut_nstubs", &m_tp_triplet_cut_nstubs);
+    eventTree->Branch("tp_triplet_cut_nstublayers", &m_tp_triplet_cut_nstublayers);
     
     if (Displaced == "Displaced" || Displaced == "Both") {
       eventTree->Branch("trkfastjetExt_eta", &m_trkfastjetExt_eta);
@@ -1833,6 +1854,40 @@ void L1TrackObjectNtupleMaker::beginJob() {
       eventTree->Branch("trkMHTEmuPhiExt", &trkMHTEmuPhiExt, "trkMHTEmuPhiExt/F");
       eventTree->Branch("trkHTEmuExt", &trkHTEmuExt, "trkHTEmuExt/F");
     }
+  }
+
+  w3piTree = fs->make<TTree>("w3piTree", "W3Pi tree");
+  if (SaveAllTracks && (Displaced == "Prompt" || Displaced == "Both")) {
+    // Tracking particle branches
+    w3piTree->Branch("tp_pt", &m_tp_pt);
+    w3piTree->Branch("tp_eta", &m_tp_eta);
+    w3piTree->Branch("tp_phi", &m_tp_phi);
+    w3piTree->Branch("tp_dxy", &m_tp_dxy);
+    w3piTree->Branch("tp_d0", &m_tp_d0);
+    w3piTree->Branch("tp_z0", &m_tp_z0);
+    w3piTree->Branch("tp_d0_prod", &m_tp_d0_prod);
+    w3piTree->Branch("tp_z0_prod", &m_tp_z0_prod);
+    w3piTree->Branch("tp_pdgid", &m_tp_pdgid);
+    w3piTree->Branch("tp_mpther_pdgid", &m_trk_matchtp_mother_pdgid);
+    w3piTree->Branch("tp_nstub", &m_tp_nstub);
+    w3piTree->Branch("tp_eventid", &m_tp_eventid);
+    w3piTree->Branch("tp_charge", &m_tp_charge);
+    // L1 trk matched to TP branches
+    w3piTree->Branch("tp_nmatch", &m_tp_nmatch);
+    w3piTree->Branch("tp_matchtrk_pt", &m_matchtrk_pt);
+    w3piTree->Branch("tp_matchtrk_eta", &m_matchtrk_eta);
+    w3piTree->Branch("tp_matchtrk_phi", &m_matchtrk_phi);
+    w3piTree->Branch("tp_matchtrk_d0", &m_matchtrk_d0);
+    w3piTree->Branch("tp_matchtrk_chi2", &m_matchtrk_chi2);
+    w3piTree->Branch("tp_matchtrk_chi2dof", &m_matchtrk_chi2dof);
+    w3piTree->Branch("tp_matchtrk_chi2rphi", &m_matchtrk_chi2rphi);
+    w3piTree->Branch("tp_matchtrk_chi2rz", &m_matchtrk_chi2rz);
+    w3piTree->Branch("tp_matchtrk_bendchi2", &m_matchtrk_bendchi2);
+    w3piTree->Branch("tp_matchtrk_nstub", &m_matchtrk_nstub);
+    w3piTree->Branch("tp_matchtrk_charge", &m_matchtrk_charge);
+
+    // L1 track branches
+    
   }
 }
 
@@ -1981,6 +2036,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     m_matchtrk_dhits->clear();
     m_matchtrk_seed->clear();
     m_matchtrk_hitpattern->clear();
+    m_matchtrk_charge->clear();
   }
 
   if (Displaced == "Displaced" || Displaced == "Both") {
@@ -2142,6 +2198,10 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     m_tp_all_nstublayers->clear();
     m_tp_all_cut_nstubs->clear();
     m_tp_all_cut_nstublayers->clear();
+    m_tp_triplet_nstubs->clear();
+    m_tp_triplet_nstublayers->clear();
+    m_tp_triplet_cut_nstubs->clear();
+    m_tp_triplet_cut_nstublayers->clear();
 
     if (Displaced == "Displaced" || Displaced == "Both") {
       m_trkjetExt_eta->clear();
@@ -3188,6 +3248,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       int tmp_matchtrk_seed = -999;
       int tmp_matchtrk_hitpattern = -999;
       int tmp_matchtrk_nFitPars = -999;
+      int tmp_matchtrk_charge = -999;
 
       if (nMatch > 1 && DebugMode)
         edm::LogVerbatim("Tracklet") << "WARNING *** 2 or more matches to genuine L1 tracks ***";
@@ -3198,6 +3259,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
         tmp_matchtrk_phi = matchedTracks.at(i_track)->momentum().phi();
         tmp_matchtrk_z0 = matchedTracks.at(i_track)->z0();
         tmp_matchtrk_nFitPars = matchedTracks.at(i_track)->nFitPars();
+        tmp_matchtrk_charge = (int) matchedTracks.at(i_track)->rInv() / fabs(matchedTracks.at(i_track)->rInv());
 
         if (tmp_matchtrk_nFitPars == 5) {
           float tmp_matchtrk_x0 = matchedTracks.at(i_track)->POCA().x();
@@ -3255,6 +3317,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       m_matchtrk_lhits->push_back(tmp_matchtrk_lhits);
       m_matchtrk_seed->push_back(tmp_matchtrk_seed);
       m_matchtrk_hitpattern->push_back(tmp_matchtrk_hitpattern);
+      m_matchtrk_charge->push_back(tmp_matchtrk_charge);
     }
 
 
@@ -3565,6 +3628,12 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       std::vector<edm::Ptr<TTTrack<Ref_Phase2TrackerDigi_>>> matchedTracks = MCTruthTTTrackHandle->findTTTrackPtrs(tp_ptr);
       this_tp++;
 
+      if (tp_ptr.isNull() == false) {
+        int tmp_eventid = tp_ptr->eventId().event();
+        if (tmp_eventid > 0)
+          continue;  // this means stub from pileup track
+      }
+
       std::vector<edm::Ref<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>, TTStub<Ref_Phase2TrackerDigi_>>>
       theStubRefs = MCTruthTTStubHandle->findTTStubRefs(tp_ptr);
       int nStubTP = (int)theStubRefs.size();
@@ -3598,7 +3667,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       }
 
       // Fill all TP nstub branches before cuts
-      if (iterTP->charge() != 0) {
+      if (tp_ptr->charge() != 0) {
         m_tp_all_nstubs->push_back(nStubTP);
         m_tp_all_nstublayers->push_back(nStubLayerTP);
 
@@ -3616,11 +3685,10 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
 
       if (TP_minNStubLayer > 0) {
         if (nStubLayerTP < TP_minNStubLayer) {
-          if (DebugMode)
           continue;
         }
       }
-
+      
       // Tracking efficiency plots for all TPs
       if (iterTP->pt() >= 2 && std::abs(iterTP->eta()) <= 2.4) {
         m_tp_all_pt->push_back(iterTP->pt());
@@ -3702,8 +3770,10 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       }
     }
 
+    // TP study branches for W decays
     if (std::abs(tpPdgidTriplet[0]) == 211 && std::abs(tpPdgidTriplet[1]) == 211 && std::abs(tpPdgidTriplet[2]) == 211) {
       if (std::abs(tpPdgidMotherTriplet[0]) == 24 && std::abs(tpPdgidMotherTriplet[1]) == 24 && std::abs(tpPdgidMotherTriplet[2]) == 24) {
+        // Individual triplet track pt and eta
         m_triplet_tp_pi1pt->push_back(tpPtTriplet[0]);
         m_triplet_tp_pi2pt->push_back(tpPtTriplet[1]);
         m_triplet_tp_pi3pt->push_back(tpPtTriplet[2]);
@@ -3711,6 +3781,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
         m_triplet_tp_pi2eta->push_back(tpEtaTriplet[1]);
         m_triplet_tp_pi3eta->push_back(tpEtaTriplet[2]);
 
+        // Branches for highest-pT track with pT and eta cuts
         if (tpPtTriplet[0] >= 2 && std::abs(tpEtaTriplet[0]) <= 2.4) {
           m_triplet_tp_all_pt->push_back(tpPtTriplet[0]);
           m_triplet_tp_all_eta->push_back(tpEtaTriplet[0]);
@@ -3718,7 +3789,11 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
             m_triplet_tp_matched_pt->push_back(tpPtTriplet[0]);
             m_triplet_tp_matched_eta->push_back(tpEtaTriplet[0]);
           }
+          m_tp_triplet_cut_nstubs->push_back(tpNStubsTriplet[0]);
+          m_tp_triplet_cut_nstublayers->push_back(tpNStubLayersTriplet[0]);
         }
+
+        // Branches for second highest-pT track with pT and eta cuts
         if (tpPtTriplet[1] >= 2 && std::abs(tpEtaTriplet[1]) <= 2.4) {
           m_triplet_tp_all_pt->push_back(tpPtTriplet[1]);
           m_triplet_tp_all_eta->push_back(tpEtaTriplet[1]);
@@ -3726,7 +3801,11 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
             m_triplet_tp_matched_pt->push_back(tpPtTriplet[1]);
             m_triplet_tp_matched_eta->push_back(tpEtaTriplet[1]);
           }
+          m_tp_triplet_cut_nstubs->push_back(tpNStubsTriplet[1]);
+          m_tp_triplet_cut_nstublayers->push_back(tpNStubLayersTriplet[1]);
         }
+
+        // Branches for third highest-pT track with pT and eta cuts
         if (tpPtTriplet[2] >= 2 && std::abs(tpEtaTriplet[2]) <= 2.4) {
           m_triplet_tp_all_pt->push_back(tpPtTriplet[2]);
           m_triplet_tp_all_eta->push_back(tpEtaTriplet[2]);
@@ -3734,14 +3813,26 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
             m_triplet_tp_matched_pt->push_back(tpPtTriplet[2]);
             m_triplet_tp_matched_eta->push_back(tpEtaTriplet[2]);
           }
+          m_tp_triplet_cut_nstubs->push_back(tpNStubsTriplet[2]);
+          m_tp_triplet_cut_nstublayers->push_back(tpNStubLayersTriplet[2]);
         }
 
+        // Fill nstub and nstublayers branches for W decay triplet tracks (no cuts)
+        m_tp_triplet_nstubs->push_back(tpNStubsTriplet[0]);
+        m_tp_triplet_nstubs->push_back(tpNStubsTriplet[1]);
+        m_tp_triplet_nstubs->push_back(tpNStubsTriplet[2]);
+        m_tp_triplet_nstublayers->push_back(tpNStubLayersTriplet[0]);
+        m_tp_triplet_nstublayers->push_back(tpNStubLayersTriplet[1]);
+        m_tp_triplet_nstublayers->push_back(tpNStubLayersTriplet[2]);
+
+        // pT min and eta max plots for W decay TPs 
         float triplet_pt_min = std::min(std::min(tpPtTriplet[0], tpPtTriplet[1]), tpPtTriplet[2]);
         float triplet_eta_max = std::max(std::max(std::abs(tpEtaTriplet[0]), std::abs(tpEtaTriplet[1])), std::abs(tpEtaTriplet[2]));
 
         m_triplet_tp_min_pt->push_back(triplet_pt_min);
         m_triplet_tp_max_eta->push_back(triplet_eta_max);
 
+        // Branches for all W decay TPs in pT and eta acceptance
         if (tpPtTriplet[0] >= 2 && tpPtTriplet[1] >= 2 && tpPtTriplet[2] >= 2 && std::abs(tpEtaTriplet[0]) <= 2.4 && std::abs(tpEtaTriplet[1]) <= 2.4 && std::abs(tpEtaTriplet[2]) <= 2.4) {
           m_triplet_tp_pis_highest_pt->push_back(1);
           
@@ -3753,7 +3844,8 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
         } else {
           m_triplet_tp_pis_highest_pt->push_back(0);
         }
-
+        
+        // Min nstub and max nstublayers for W decay TPs
         int min_nstubs = (int) std::min(std::min(tpNStubsTriplet[0],tpNStubsTriplet[1]), tpNStubsTriplet[2]);
         int max_nstublayers = (int) std::max(std::max(tpNStubLayersTriplet[0],tpNStubLayersTriplet[1]), tpNStubLayersTriplet[2]);
 
