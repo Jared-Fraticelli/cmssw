@@ -301,6 +301,7 @@ private:
   std::vector<float>* m_trk_bendchi2;
   std::vector<float>* m_trk_MVA1;
   std::vector<int>* m_trk_nstub;
+  std::vector<int>* m_trk_nstublayer;
   std::vector<int>* m_trk_lhits;
   std::vector<int>* m_trk_dhits;
   std::vector<int>* m_trk_seed;
@@ -313,12 +314,21 @@ private:
   std::vector<int>* m_trk_fake;  //0 fake, 1 track from primary interaction, 2 secondary track
   std::vector<int>* m_trk_matchtp_pdgid;
   std::vector<int>* m_trk_matchtp_mother_pdgid;
+  std::vector<int>* m_trk_matchtp_nstub;
+  std::vector<int>* m_trk_matchtp_nstublayer;
+  std::vector<int>* m_trk_matchtp_isHard;
 
   std::vector<float>* m_trk_matchtp_pt;
   std::vector<float>* m_trk_matchtp_eta;
   std::vector<float>* m_trk_matchtp_phi;
   std::vector<float>* m_trk_matchtp_z0;
   std::vector<float>* m_trk_matchtp_dxy;
+  std::vector<float>* m_trk_matchtp_vx;
+  std::vector<float>* m_trk_matchtp_vy;
+  std::vector<float>* m_trk_matchtp_vz;
+  std::vector<float>* m_trk_matchtp_dvx;
+  std::vector<float>* m_trk_matchtp_dvy;
+  std::vector<float>* m_trk_matchtp_dvz;
   std::vector<float>* m_trk_gtt_pt;
   std::vector<float>* m_trk_gtt_eta;
   std::vector<float>* m_trk_gtt_phi;
@@ -393,8 +403,16 @@ private:
   std::vector<int>* m_tp_pdgid;
   std::vector<int>* m_tp_nmatch;
   std::vector<int>* m_tp_nstub;
+  std::vector<int>* m_tp_nstublayer;
   std::vector<int>* m_tp_eventid;
   std::vector<int>* m_tp_charge;
+  std::vector<int>* m_tp_isHard;
+  std::vector<float>* m_tp_vx;
+  std::vector<float>* m_tp_vy;
+  std::vector<float>* m_tp_vz;
+  std::vector<float>* m_tp_dvx;
+  std::vector<float>* m_tp_dvy;
+  std::vector<float>* m_tp_dvz;
 
   // *L1 track* properties if m_tp_nmatch > 0 (prompt)
   std::vector<float>* m_matchtrk_pt;
@@ -409,6 +427,7 @@ private:
   std::vector<float>* m_matchtrk_bendchi2;
   std::vector<float>* m_matchtrk_MVA1;
   std::vector<int>* m_matchtrk_nstub;
+  std::vector<int>* m_matchtrk_nstublayer;
   std::vector<int>* m_matchtrk_lhits;
   std::vector<int>* m_matchtrk_dhits;
   std::vector<int>* m_matchtrk_seed;
@@ -840,6 +859,7 @@ void L1TrackObjectNtupleMaker::endJob() {
   delete m_trk_bendchi2;
   delete m_trk_MVA1;
   delete m_trk_nstub;
+  delete m_trk_nstublayer;
   delete m_trk_lhits;
   delete m_trk_dhits;
   delete m_trk_seed;
@@ -852,12 +872,21 @@ void L1TrackObjectNtupleMaker::endJob() {
   delete m_trk_fake;
   delete m_trk_matchtp_pdgid;
   delete m_trk_matchtp_mother_pdgid;
+  delete m_trk_matchtp_nstub;
+  delete m_trk_matchtp_nstublayer;
+  delete m_trk_matchtp_isHard;
 
   delete m_trk_matchtp_pt;
   delete m_trk_matchtp_eta;
   delete m_trk_matchtp_phi;
   delete m_trk_matchtp_z0;
   delete m_trk_matchtp_dxy;
+  delete m_trk_matchtp_vx;
+  delete m_trk_matchtp_vy;
+  delete m_trk_matchtp_vz;
+  delete m_trk_matchtp_dvx;
+  delete m_trk_matchtp_dvy;
+  delete m_trk_matchtp_dvz;
   delete m_trk_gtt_pt;
   delete m_trk_gtt_eta;
   delete m_trk_gtt_phi;
@@ -930,8 +959,16 @@ void L1TrackObjectNtupleMaker::endJob() {
   delete m_tp_pdgid;
   delete m_tp_nmatch;
   delete m_tp_nstub;
+  delete m_tp_nstublayer;
   delete m_tp_eventid;
   delete m_tp_charge;
+  delete m_tp_isHard;
+  delete m_tp_vx;
+  delete m_tp_vy;
+  delete m_tp_vz;
+  delete m_tp_dvx;
+  delete m_tp_dvy;
+  delete m_tp_dvz;
 
   delete m_gen_pt;
   delete m_gen_phi;
@@ -952,6 +989,7 @@ void L1TrackObjectNtupleMaker::endJob() {
   delete m_matchtrk_bendchi2;
   delete m_matchtrk_MVA1;
   delete m_matchtrk_nstub;
+  delete m_matchtrk_nstublayer;
   delete m_matchtrk_dhits;
   delete m_matchtrk_lhits;
   delete m_matchtrk_seed;
@@ -1176,6 +1214,7 @@ void L1TrackObjectNtupleMaker::beginJob() {
   m_trk_bendchi2 = new std::vector<float>;
   m_trk_MVA1 = new std::vector<float>;
   m_trk_nstub = new std::vector<int>;
+  m_trk_nstublayer = new std::vector<int>;
   m_trk_lhits = new std::vector<int>;
   m_trk_dhits = new std::vector<int>;
   m_trk_seed = new std::vector<int>;
@@ -1188,12 +1227,21 @@ void L1TrackObjectNtupleMaker::beginJob() {
   m_trk_fake = new std::vector<int>;
   m_trk_matchtp_pdgid = new std::vector<int>;
   m_trk_matchtp_mother_pdgid = new std::vector<int>;
+  m_trk_matchtp_nstub = new std::vector<int>; 
+  m_trk_matchtp_nstublayer = new std::vector<int>;
+  m_trk_matchtp_isHard = new std::vector<int>;
 
   m_trk_matchtp_pt = new std::vector<float>;
   m_trk_matchtp_eta = new std::vector<float>;
   m_trk_matchtp_phi = new std::vector<float>;
   m_trk_matchtp_z0 = new std::vector<float>;
   m_trk_matchtp_dxy = new std::vector<float>;
+  m_trk_matchtp_vx = new std::vector<float>;
+  m_trk_matchtp_vy = new std::vector<float>;
+  m_trk_matchtp_vz = new std::vector<float>;
+  m_trk_matchtp_dvx = new std::vector<float>;
+  m_trk_matchtp_dvy = new std::vector<float>;
+  m_trk_matchtp_dvz = new std::vector<float>;
   m_trk_gtt_pt = new std::vector<float>;
   m_trk_gtt_eta = new std::vector<float>;
   m_trk_gtt_phi = new std::vector<float>;
@@ -1266,8 +1314,16 @@ void L1TrackObjectNtupleMaker::beginJob() {
   m_tp_pdgid = new std::vector<int>;
   m_tp_nmatch = new std::vector<int>;
   m_tp_nstub = new std::vector<int>;
+  m_tp_nstublayer = new std::vector<int>;
   m_tp_eventid = new std::vector<int>;
   m_tp_charge = new std::vector<int>;
+  m_tp_isHard = new std::vector<int>;
+  m_tp_vx = new std::vector<float>;
+  m_tp_vy = new std::vector<float>;
+  m_tp_vz = new std::vector<float>;
+  m_tp_dvx = new std::vector<float>;
+  m_tp_dvy = new std::vector<float>;
+  m_tp_dvz = new std::vector<float>;
 
   m_gen_pt = new std::vector<float>;
   m_gen_phi = new std::vector<float>;
@@ -1288,6 +1344,7 @@ void L1TrackObjectNtupleMaker::beginJob() {
   m_matchtrk_bendchi2 = new std::vector<float>;
   m_matchtrk_MVA1 = new std::vector<float>;
   m_matchtrk_nstub = new std::vector<int>;
+  m_matchtrk_nstublayer = new std::vector<int>;
   m_matchtrk_dhits = new std::vector<int>;
   m_matchtrk_lhits = new std::vector<int>;
   m_matchtrk_seed = new std::vector<int>;
@@ -1857,7 +1914,7 @@ void L1TrackObjectNtupleMaker::beginJob() {
   }
 
   w3piTree = fs->make<TTree>("w3piTree", "W3Pi tree");
-  if (SaveAllTracks && (Displaced == "Prompt" || Displaced == "Both")) {
+  if (Displaced == "Prompt") {
     // Tracking particle branches
     w3piTree->Branch("tp_pt", &m_tp_pt);
     w3piTree->Branch("tp_eta", &m_tp_eta);
@@ -1868,12 +1925,20 @@ void L1TrackObjectNtupleMaker::beginJob() {
     w3piTree->Branch("tp_d0_prod", &m_tp_d0_prod);
     w3piTree->Branch("tp_z0_prod", &m_tp_z0_prod);
     w3piTree->Branch("tp_pdgid", &m_tp_pdgid);
-    w3piTree->Branch("tp_mpther_pdgid", &m_trk_matchtp_mother_pdgid);
+    w3piTree->Branch("tp_mother_pdgid", &m_trk_matchtp_mother_pdgid);
     w3piTree->Branch("tp_nstub", &m_tp_nstub);
+    w3piTree->Branch("tp_nstublayer", &m_tp_nstublayer);
     w3piTree->Branch("tp_eventid", &m_tp_eventid);
     w3piTree->Branch("tp_charge", &m_tp_charge);
-    // L1 trk matched to TP branches
     w3piTree->Branch("tp_nmatch", &m_tp_nmatch);
+    w3piTree->Branch("tp_isHard", &m_tp_isHard);
+    w3piTree->Branch("tp_vx", &m_tp_vx);
+    w3piTree->Branch("tp_vy", &m_tp_vy);
+    w3piTree->Branch("tp_vz", &m_tp_vz);
+    w3piTree->Branch("tp_dvx", &m_tp_dvx);
+    w3piTree->Branch("tp_dvy", &m_tp_dvy);
+    w3piTree->Branch("tp_dvz", &m_tp_dvz);
+    // TP matched to L1 track branches
     w3piTree->Branch("tp_matchtrk_pt", &m_matchtrk_pt);
     w3piTree->Branch("tp_matchtrk_eta", &m_matchtrk_eta);
     w3piTree->Branch("tp_matchtrk_phi", &m_matchtrk_phi);
@@ -1884,10 +1949,37 @@ void L1TrackObjectNtupleMaker::beginJob() {
     w3piTree->Branch("tp_matchtrk_chi2rz", &m_matchtrk_chi2rz);
     w3piTree->Branch("tp_matchtrk_bendchi2", &m_matchtrk_bendchi2);
     w3piTree->Branch("tp_matchtrk_nstub", &m_matchtrk_nstub);
+    w3piTree->Branch("tp_matchtrk_nstublayer", &m_matchtrk_nstublayer);
     w3piTree->Branch("tp_matchtrk_charge", &m_matchtrk_charge);
 
     // L1 track branches
-    
+    w3piTree->Branch("trk_pt", &m_trk_pt);
+    w3piTree->Branch("trk_eta", &m_trk_eta);
+    w3piTree->Branch("trk_d0", &m_trk_d0);
+    w3piTree->Branch("trk_chi2", &m_trk_chi2);
+    w3piTree->Branch("trk_chi2dof", &m_trk_chi2dof);
+    w3piTree->Branch("trk_chi2rphi", &m_trk_chi2rphi);
+    w3piTree->Branch("trk_chi2rz", &m_trk_chi2rz);
+    w3piTree->Branch("trk_bendchi2", &m_trk_bendchi2);
+    w3piTree->Branch("trk_nstub", &m_trk_nstub);
+    w3piTree->Branch("trk_nstublayer", &m_trk_nstublayer);
+    // L1 track matched to TP branches
+    w3piTree->Branch("trk_matchtp_pt", &m_trk_matchtp_pt);
+    w3piTree->Branch("trk_matchtp_eta", &m_trk_matchtp_eta);
+    w3piTree->Branch("trk_matchtp_pdgid", &m_trk_matchtp_pdgid);
+    w3piTree->Branch("trk_matchtp_mother_pdgid", &m_trk_matchtp_mother_pdgid);
+    w3piTree->Branch("trk_fake", &m_trk_fake);
+    w3piTree->Branch("trk_matchtp_nstub", &m_trk_matchtp_nstub);
+    w3piTree->Branch("trk_matchtp_nstublayer", &m_trk_matchtp_nstublayer);
+    w3piTree->Branch("trk_matchtp_isHard", &m_trk_matchtp_isHard);
+    w3piTree->Branch("trk_matchtp_vx", &m_trk_matchtp_vx);
+    w3piTree->Branch("trk_matchtp_vy", &m_trk_matchtp_vy);
+    w3piTree->Branch("trk_matchtp_vz", &m_trk_matchtp_vz);
+    w3piTree->Branch("trk_matchtp_dvx", &m_trk_matchtp_dvx);
+    w3piTree->Branch("trk_matchtp_dvy", &m_trk_matchtp_dvy);
+    w3piTree->Branch("trk_matchtp_dvz", &m_trk_matchtp_dvz);
+  
+   
   }
 }
 
@@ -1918,6 +2010,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     m_trk_bendchi2->clear();
     m_trk_MVA1->clear();
     m_trk_nstub->clear();
+    m_trk_nstublayer->clear();
     m_trk_lhits->clear();
     m_trk_dhits->clear();
     m_trk_seed->clear();
@@ -1930,6 +2023,15 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     m_trk_fake->clear();
     m_trk_matchtp_pdgid->clear();
     m_trk_matchtp_mother_pdgid->clear();
+    m_trk_matchtp_nstub->clear();
+    m_trk_matchtp_nstublayer->clear();
+    m_trk_matchtp_isHard->clear();
+    m_trk_matchtp_vx->clear();
+    m_trk_matchtp_vy->clear();
+    m_trk_matchtp_vz->clear();
+    m_trk_matchtp_dvx->clear();
+    m_trk_matchtp_dvy->clear();
+    m_trk_matchtp_dvz->clear();
 
     m_trk_matchtp_pt->clear();
     m_trk_matchtp_eta->clear();
@@ -2009,8 +2111,16 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
   m_tp_pdgid->clear();
   m_tp_nmatch->clear();
   m_tp_nstub->clear();
+  m_tp_nstublayer->clear();
   m_tp_eventid->clear();
   m_tp_charge->clear();
+  m_tp_isHard->clear();
+  m_tp_vx->clear();
+  m_tp_vy->clear();
+  m_tp_vz->clear();
+  m_tp_dvx->clear();
+  m_tp_dvy->clear();
+  m_tp_dvz->clear();
 
   m_gen_pt->clear();
   m_gen_phi->clear();
@@ -2032,6 +2142,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     m_matchtrk_bendchi2->clear();
     m_matchtrk_MVA1->clear();
     m_matchtrk_nstub->clear();
+    m_matchtrk_nstublayer->clear();
     m_matchtrk_lhits->clear();
     m_matchtrk_dhits->clear();
     m_matchtrk_seed->clear();
@@ -2580,6 +2691,37 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       std::vector<edm::Ref<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>, TTStub<Ref_Phase2TrackerDigi_>>>
           stubRefs = iterL1Track->getStubRefs();
       int tmp_trk_nstub = (int)stubRefs.size();
+
+      // how many layers/disks have stubs?
+      int hasStubInLayerL1[11] = {0};
+      for (auto& theStubRef : stubRefs) {
+        DetId detid(theStubRef->getDetId());
+
+        int layer = -1;
+        if (detid.subdetId() == StripSubdetector::TOB) {
+          layer = static_cast<int>(tTopo.layer(detid)) - 1;  //fill in array as entries 0-5
+        } else if (detid.subdetId() == StripSubdetector::TID) {
+          layer = static_cast<int>(tTopo.layer(detid)) + 5;  //fill in array as entries 6-10
+        }
+
+        //treat genuine stubs separately (==2 is genuine, ==1 is not)
+        if (MCTruthTTStubHandle->findTrackingParticlePtr(theStubRef).isNull() && hasStubInLayerL1[layer] < 2)
+          hasStubInLayerL1[layer] = 1;
+        else
+          hasStubInLayerL1[layer] = 2;
+      }
+
+      int nStubLayerL1 = 0;
+      int nStubLayerL1_g = 0;
+      for (int isum : hasStubInLayerL1) {
+        if (isum >= 1)
+          nStubLayerL1 += 1;
+        if (isum == 2)
+          nStubLayerL1_g += 1;
+      }
+
+      int tmp_trk_nstublayer = nStubLayerL1;
+      
       int tmp_trk_seed = 0;
       tmp_trk_seed = (int)iterL1Track->trackSeedType();
       int tmp_trk_hitpattern = 0;
@@ -2664,6 +2806,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       m_trk_bendchi2->push_back(tmp_trk_bendchi2);
       m_trk_MVA1->push_back(tmp_trk_MVA1);
       m_trk_nstub->push_back(tmp_trk_nstub);
+      m_trk_nstublayer->push_back(tmp_trk_nstublayer);
       m_trk_dhits->push_back(tmp_trk_dhits);
       m_trk_lhits->push_back(tmp_trk_lhits);
       m_trk_seed->push_back(tmp_trk_seed);
@@ -2679,16 +2822,24 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       // ----------------------------------------------------------------------------------------------
       // tracking particle matched to L1 track
       edm::Ptr<TrackingParticle> my_tp = MCTruthTTTrackHandle->findTrackingParticlePtr(l1track_ptr);
-
+     
       int myFake = 0;
       int myTP_pdgid = -999;
       int myTP_mother_pdgid = -999;
+      int myTP_nstubs = -999;
+      int myTP_nstublayers = -999;
 
       float myTP_pt = -999;
       float myTP_eta = -999;
       float myTP_phi = -999;
       float myTP_z0 = -999;
       float myTP_dxy = -999;
+      float myTP_vx = -999;
+      float myTP_vy = -999;
+      float myTP_vz = -999;
+      float myTP_dvx = -999;
+      float myTP_dvy = -999;
+      float myTP_dvz = -999;
 
       if (my_tp.isNull())
         myFake = 0;
@@ -2712,6 +2863,44 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
         float myTP_y0 = my_tp->vertex().y();
         myTP_dxy = sqrt(myTP_x0 * myTP_x0 + myTP_y0 * myTP_y0);
 
+        myTP_vx = my_tp->vx();
+        myTP_vy = my_tp->vy();
+        myTP_vz = my_tp->vz();
+
+        std::vector<edm::Ref<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>, TTStub<Ref_Phase2TrackerDigi_>>>
+          tpStubRefs = MCTruthTTStubHandle->findTTStubRefs(my_tp);
+        myTP_nstubs = (int)tpStubRefs.size();
+
+        // how many layers/disks have stubs?
+        int hasStubInLayer[11] = {0};
+        for (auto& theStubRef : tpStubRefs) {
+          DetId detid(theStubRef->getDetId());
+
+          int layer = -1;
+          if (detid.subdetId() == StripSubdetector::TOB) {
+            layer = static_cast<int>(tTopo.layer(detid)) - 1;  //fill in array as entries 0-5
+          } else if (detid.subdetId() == StripSubdetector::TID) {
+            layer = static_cast<int>(tTopo.layer(detid)) + 5;  //fill in array as entries 6-10
+          }
+
+          //treat genuine stubs separately (==2 is genuine, ==1 is not)
+          if (MCTruthTTStubHandle->findTrackingParticlePtr(theStubRef).isNull() && hasStubInLayer[layer] < 2)
+            hasStubInLayer[layer] = 1;
+          else
+            hasStubInLayer[layer] = 2;
+        }
+
+        int nStubLayerTP = 0;
+        int nStubLayerTP_g = 0;
+        for (int isum : hasStubInLayer) {
+          if (isum >= 1)
+            nStubLayerTP += 1;
+          if (isum == 2)
+            nStubLayerTP_g += 1;
+        }
+
+        myTP_nstublayers = nStubLayerTP;
+
         if (DebugMode) {
           edm::LogVerbatim("Tracklet") << "TP matched to track has pt = " << my_tp->p4().pt()
                                        << " eta = " << my_tp->momentum().eta() << " phi = " << my_tp->momentum().phi()
@@ -2729,6 +2918,34 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       m_trk_matchtp_phi->push_back(myTP_phi);
       m_trk_matchtp_z0->push_back(myTP_z0);
       m_trk_matchtp_dxy->push_back(myTP_dxy);
+      m_trk_matchtp_nstub->push_back(myTP_nstubs);
+      m_trk_matchtp_nstublayer->push_back(myTP_nstublayers);
+      m_trk_matchtp_vx->push_back(myTP_vx);
+      m_trk_matchtp_vy->push_back(myTP_vy);
+      m_trk_matchtp_vz->push_back(myTP_vz);
+
+      if (my_tp->status() == 1) {
+        m_trk_matchtp_isHard->push_back(1);
+      } else {
+        m_trk_matchtp_isHard->push_back(0);
+      }
+
+      // Decay vertices
+      int counter = 0;
+      for (const auto& ref : my_tp->decayVertices()) {
+        if (counter == 1) {
+          break;
+        }
+        const TrackingVertex v = *ref;
+        myTP_dvx = v.position().x();
+        myTP_dvy = v.position().y();
+        myTP_dvz = v.position().z();
+        counter++;
+      }
+
+      m_trk_matchtp_dvx->push_back(myTP_dvx);
+      m_trk_matchtp_dvy->push_back(myTP_dvy);
+      m_trk_matchtp_dvz->push_back(myTP_dvz);
 
       // ----------------------------------------------------------------------------------------------
       // store the index to the selected track or -1 if not selected
@@ -2997,6 +3214,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     this_tp++;
 
     int tmp_eventid = iterTP->eventId().event();
+    int status = iterTP->status();
     if (MyProcess != 1 && tmp_eventid > 0)
       continue;  //only care about primary interaction
 
@@ -3009,6 +3227,9 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     int tmp_tp_pdgid = iterTP->pdgId();
     float tmp_tp_z0_prod = tmp_tp_vz;
     float tmp_tp_d0_prod = tmp_tp_vx * sin(tmp_tp_phi) - tmp_tp_vy * cos(tmp_tp_phi);
+    float tmp_tp_dvx = -999;
+    float tmp_tp_dvy = -999;
+    float tmp_tp_dvz = -999;
 
     if (MyProcess == 13 && abs(tmp_tp_pdgid) != 13)
       continue;
@@ -3017,10 +3238,12 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     if ((MyProcess == 6 || MyProcess == 15 || MyProcess == 211) && abs(tmp_tp_pdgid) != 211)
       continue;
 
+    /*
     if (tmp_tp_pt < TP_minPt)
       continue;
     if (std::abs(tmp_tp_eta) > TP_maxEta)
       continue;
+    */
 
     // ----------------------------------------------------------------------------------------------
     // get d0/z0 propagated back to the IP
@@ -3047,14 +3270,19 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     float tmp_tp_z0 = tmp_tp_vz + tmp_tp_t * delphi / (2.0 * K);
     // ----------------------------------------------------------------------------------------------
 
+    /*
     if (std::abs(tmp_tp_z0) > TP_maxZ0)
       continue;
+    */
 
     // for pions in ttbar, only consider TPs coming from near the IP!
     float dxy = sqrt(tmp_tp_vx * tmp_tp_vx + tmp_tp_vy * tmp_tp_vy);
     float tmp_tp_dxy = dxy;
+
+    /*
     if (MyProcess == 6 && (dxy > 1.0))
       continue;
+    */
 
     if (DebugMode && (Displaced == "Prompt" || Displaced == "Both"))
       edm::LogVerbatim("Tracklet") << "Tracking particle, pt: " << tmp_tp_pt << " eta: " << tmp_tp_eta
@@ -3067,12 +3295,13 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
 
     // ----------------------------------------------------------------------------------------------
     // only consider TPs associated with >= 1 cluster, or >= X stubs, or have stubs in >= X layers (configurable options)
+    /*
     if (MCTruthTTClusterHandle->findTTClusterRefs(tp_ptr).empty()) {
       if (DebugMode)
         edm::LogVerbatim("Tracklet") << "No matching TTClusters for TP, continuing...";
       continue;
     }
-
+    */
     std::vector<edm::Ref<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>, TTStub<Ref_Phase2TrackerDigi_>>>
         theStubRefs = MCTruthTTStubHandle->findTTStubRefs(tp_ptr);
     int nStubTP = (int)theStubRefs.size();
@@ -3110,6 +3339,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
                                    << " different layers/disks, and has GENUINE stubs in " << nStubLayerTP_g
                                    << " layers ";
 
+    /*                        
     if (TP_minNStub > 0) {
       if (DebugMode)
         edm::LogVerbatim("Tracklet") << "Only consider TPs with >= " << TP_minNStub << " stubs";
@@ -3128,10 +3358,24 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
         continue;
       }
     }
-
+    */
+    
     if (tmp_eventid == 0) {
       trueTkMETx += tmp_tp_pt * cos(tmp_tp_phi);
       trueTkMETy += tmp_tp_pt * sin(tmp_tp_phi);
+    }
+
+    // Decay vertices
+    int counter = 0;
+    for (const auto& ref : tp_ptr->decayVertices()) {
+      if (counter == 1) {
+        break;
+      }
+      const TrackingVertex v = *ref;
+      tmp_tp_dvx = v.position().x();
+      tmp_tp_dvy = v.position().y();
+      tmp_tp_dvz = v.position().z();
+      counter++;
     }
 
     m_tp_pt->push_back(tmp_tp_pt);
@@ -3144,8 +3388,22 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
     m_tp_d0_prod->push_back(tmp_tp_d0_prod);
     m_tp_pdgid->push_back(tmp_tp_pdgid);
     m_tp_nstub->push_back(nStubTP);
+    m_tp_nstublayer->push_back(nStubLayerTP);
     m_tp_eventid->push_back(tmp_eventid);
     m_tp_charge->push_back(tmp_tp_charge);
+    m_tp_vx->push_back(tmp_tp_vx);
+    m_tp_vy->push_back(tmp_tp_vy);
+    m_tp_vz->push_back(tmp_tp_vz);
+    m_tp_dvx->push_back(tmp_tp_dvx);
+    m_tp_dvy->push_back(tmp_tp_dvy);
+    m_tp_dvz->push_back(tmp_tp_dvz);
+    
+    
+    if (status == 1) {
+      m_tp_isHard->push_back(1);
+    } else {
+      m_tp_isHard->push_back(0);
+    }
 
     // ----------------------------------------------------------------------------------------------
     // look for L1 tracks (prompt) matched to the tracking particle
@@ -3243,6 +3501,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       float tmp_matchtrk_bendchi2 = -999;
       float tmp_matchtrk_MVA1 = -999;
       int tmp_matchtrk_nstub = -999;
+      int tmp_matchtrk_nstublayer = -999;
       int tmp_matchtrk_dhits = -999;
       int tmp_matchtrk_lhits = -999;
       int tmp_matchtrk_seed = -999;
@@ -3286,6 +3545,36 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
             stubRefs = matchedTracks.at(i_track)->getStubRefs();
         int tmp_nstub = stubRefs.size();
 
+        // how many layers/disks have stubs?
+        int hasStubInLayerL1[11] = {0};
+        for (auto& theStubRef : stubRefs) {
+          DetId detid(theStubRef->getDetId());
+
+          int layer = -1;
+          if (detid.subdetId() == StripSubdetector::TOB) {
+            layer = static_cast<int>(tTopo.layer(detid)) - 1;  //fill in array as entries 0-5
+          } else if (detid.subdetId() == StripSubdetector::TID) {
+            layer = static_cast<int>(tTopo.layer(detid)) + 5;  //fill in array as entries 6-10
+          } 
+
+          //treat genuine stubs separately (==2 is genuine, ==1 is not)
+          if (MCTruthTTStubHandle->findTrackingParticlePtr(theStubRef).isNull() && hasStubInLayerL1[layer] < 2)
+            hasStubInLayerL1[layer] = 1;
+          else
+            hasStubInLayerL1[layer] = 2;
+        }
+
+        int nStubLayerL1 = 0;
+        int nStubLayerL1_g = 0;
+        for (int isum : hasStubInLayerL1) {
+          if (isum >= 1)
+            nStubLayerL1 += 1;
+          if (isum == 2)
+            nStubLayerL1_g += 1;
+        }
+
+        tmp_matchtrk_nstublayer = nStubLayerL1;
+
         for (int is = 0; is < tmp_nstub; is++) {
           DetId detIdStub = tGeom.idToDet((stubRefs.at(is)->clusterRef(0))->getDetId())->geographicalId();
           int layer = -999999;
@@ -3313,6 +3602,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
       m_matchtrk_bendchi2->push_back(tmp_matchtrk_bendchi2);
       m_matchtrk_MVA1->push_back(tmp_matchtrk_MVA1);
       m_matchtrk_nstub->push_back(tmp_matchtrk_nstub);
+      m_matchtrk_nstublayer->push_back(tmp_matchtrk_nstublayer);
       m_matchtrk_dhits->push_back(tmp_matchtrk_dhits);
       m_matchtrk_lhits->push_back(tmp_matchtrk_lhits);
       m_matchtrk_seed->push_back(tmp_matchtrk_seed);
@@ -4264,6 +4554,7 @@ void L1TrackObjectNtupleMaker::analyze(const edm::Event& iEvent, const edm::Even
   }  // end track jets
 
   eventTree->Fill();
+  w3piTree->Fill();
 }  // end of analyze()
 
 int L1TrackObjectNtupleMaker::getSelectedTrackIndex(const L1TrackRef& trackRef,
