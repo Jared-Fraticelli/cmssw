@@ -12,15 +12,15 @@ import os
 L1TRK_INST ="MyL1TrackJets" ### if not in input DIGRAW then we make them in the above step
 process = cms.Process(L1TRK_INST)
 
-# Consider switching to just prompt, running over one file
-L1TRKALGO = 'HYBRID'  #baseline, 4par fit 
+#L1TRKALGO = 'HYBRID'  #baseline, 4par fit
 #L1TRKALGO = 'HYBRID_DISPLACED'  #extended, 5par fit
-#L1TRKALGO = 'HYBRID_PROMPTANDDISP'
+L1TRKALGO = 'HYBRID_PROMPTANDDISP'
 
 DISPLACED = ''
 
 
 runVtxNN = True
+runDispVert = False
 ############################################################
 # import standard configurations
 ############################################################
@@ -28,33 +28,30 @@ runVtxNN = True
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D110Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D110_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110Reco_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
-
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
+
+process.load("FWCore.MessageLogger.MessageLogger_cfi")
+process.MessageLogger.cerr.INFO.limit = cms.untracked.int32(0) # default: 0
 
 ############################################################
 # input and output
 ############################################################
 
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100))  #
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(20))
 
 readFiles = cms.untracked.vstring(
-    #'/store/mc/Phase2Spring24DIGIRECOMiniAOD/MinBias_TuneCP5_14TeV-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200ALCA_140X_mcRun4_realistic_v4-v2/120000/00be05a9-68a9-4947-b279-39f694cd536c.root'
-    #'/store/mc/Phase2Spring24DIGIRECOMiniAOD/MinBias_TuneCP5_14TeV-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200ALCA_140X_mcRun4_realistic_v4-v2/120000/0710092e-a5d4-4155-bfb9-fb5f68ad4241.root'
-    '/store/mc/Phase2Spring24DIGIRECOMiniAOD/WTo3Pi_TuneCP5_14TeV_pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200_AllTP_140X_mcRun4_realistic_v4-v1/2810000/049937e5-a019-4981-9c5f-8776e42a08ea.root'
+    '/store/mc/Phase2Spring23DIGIRECOMiniAOD/TT_TuneCP5_14TeV-powheg-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200_L1TFix_Trk1GeV_131X_mcRun4_realistic_v9-v1/50000/1cc5c14c-5bae-4e68-a369-04e230788660.root'
 )
-
-
 secFiles = cms.untracked.vstring()
 
 process.source = cms.Source ("PoolSource",
                             fileNames = readFiles,
-                            #fileNames = cms.untracked.vstring(),
                             secondaryFileNames = secFiles,
                             duplicateCheckMode = cms.untracked.string('noDuplicateCheck'),
                             )
@@ -65,8 +62,8 @@ process.Timing = cms.Service("Timing",
   useJobReport = cms.untracked.bool(False)
 )
 
-# CRAB handles this differently: outputted in eos area 
-process.TFileService = cms.Service("TFileService", fileName = cms.string('w3pi_t.root'), closeFileFast = cms.untracked.bool(True))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('GTTObjects_ttbar200PU_Spring23.root'), closeFileFast = cms.untracked.bool(True))
+
 
 ############################################################
 # L1 tracking: remake stubs?
@@ -82,9 +79,10 @@ TTClusterAssociatorFromPixelDigis.digiSimLinks = cms.InputTag("simSiPixelDigis",
 process.TTClusterStub = cms.Path(process.TrackTriggerClustersStubs)
 process.TTClusterStubTruth = cms.Path(process.TrackTriggerAssociatorClustersStubs)
 
+
 # DTC emulation
-process.load('L1Trigger.TrackerDTC.ProducerED_cff')
-process.dtc = cms.Path(process.TrackerDTCProducer)
+process.load('L1Trigger.TrackerDTC.DTC_cff')
+process.dtc = cms.Path(process.ProducerDTC)
 
 process.load("L1Trigger.TrackFindingTracklet.L1HybridEmulationTracks_cff")
 process.load("L1Trigger.L1TTrackMatch.l1tTrackSelectionProducer_cfi")
@@ -99,7 +97,8 @@ process.load("L1Trigger.L1TTrackMatch.l1tTrackerHTMiss_cfi")
 process.load("L1Trigger.L1TTrackMatch.l1tTrackerEmuHTMiss_cfi")
 process.load("L1Trigger.L1TTrackMatch.l1tTrackTripletEmulation_cfi")
 process.load('L1Trigger.VertexFinder.l1tVertexProducer_cfi')
- 
+process.load('L1Trigger.L1TTrackMatch.DisplacedVertexProducer_cfi')
+
 ############################################################
 # Primary vertex
 ############################################################
@@ -171,6 +170,8 @@ elif (L1TRKALGO == 'HYBRID_DISPLACED'):
     process.pTkMET = cms.Path(process.l1tTrackerEtMissExtended)
     process.pTkMHT = cms.Path(process.l1tTrackerHTMissExtended)
     process.pTkMHTEmulator = cms.Path(process.l1tTrackerEmuHTMissExtended)
+    if(runDispVert):
+        process.DispVert = cms.Path(process.DisplacedVertexProducer)
     DISPLACED = 'Displaced'#
 
 # HYBRID: extended tracking
@@ -192,7 +193,11 @@ elif (L1TRKALGO == 'HYBRID_PROMPTANDDISP'):
     process.pTkMHT = cms.Path(process.l1tTrackerHTMiss*process.l1tTrackerHTMissExtended)
     process.pTkMHTEmulator = cms.Path(process.l1tTrackerEmuHTMiss*process.l1tTrackerEmuHTMissExtended)
     process.pL1TrackTripletEmulator = cms.Path(process.l1tTrackTripletEmulation)
+    if(runDispVert):
+        process.DispVert = cms.Path(process.DisplacedVertexProducer)
     DISPLACED = 'Both'
+
+
 
 
 ############################################################
@@ -207,8 +212,8 @@ elif (L1TRKALGO == 'HYBRID_PROMPTANDDISP'):
 
 process.L1TrackNtuple = cms.EDAnalyzer('L1TrackObjectNtupleMaker',
         MyProcess = cms.int32(1),
-        DebugMode = cms.bool(True),      # printout lots of debug statements
-        SaveAllTracks = cms.bool(False),  # save *all* L1 tracks, not just truth matched to primary particle
+        DebugMode = cms.bool(False),      # printout lots of debug statements
+        SaveAllTracks = cms.bool(True),  # save *all* L1 tracks, not just truth matched to primary particle
         SaveStubs = cms.bool(False),      # save some info for *all* stubs
         Displaced = cms.string(DISPLACED),# "Prompt", "Displaced", "Both"
         L1Tk_minNStub = cms.int32(4),     # L1 tracks with >= 4 stubs
@@ -280,8 +285,10 @@ process.L1TrackNtuple = cms.EDAnalyzer('L1TrackObjectNtupleMaker',
         GenParticleInputTag = cms.InputTag("genParticles",""),
         RecoVertexInputTag=cms.InputTag("l1tVertexFinder", "L1Vertices"),
         RecoVertexEmuInputTag=cms.InputTag("l1tVertexFinderEmulator", "L1VerticesEmulation"),
+        DisplacedVertexInputTag = cms.InputTag("DisplacedVertexProducer","dispVertices"),
+        DisplacedVertexEmulationInputTag = cms.InputTag("DisplacedVertexProducer","dispVerticesEmulation"),
+        runDispVert = cms.bool(runDispVert)
 )
-
 
 process.ntuple = cms.Path(process.L1TrackNtuple)
 
@@ -301,5 +308,7 @@ process.pOut = cms.EndPath(process.out)
 # use this if cluster/stub associators not available
 # process.schedule = cms.Schedule(process.TTClusterStubTruth,process.TTTracksEmuWithTruth,process.ntuple)
 
-# process.schedule = cms.Schedule(process.TTClusterStub, process.TTClusterStubTruth, process.dtc, process.TTTracksEmuWithTruth, process.pL1GTTInput, process.pL1TrackSelection, process.pPV, process.pPVemu,process.pL1TrackVertexAssociation, process.pL1TrackJets, process.pL1TrackJetsEmu,process.pL1TrackFastJets, process.pTkMET, process.pTkMETEmu, process.pTkMHT, process.pTkMHTEmulator,process.pL1TrackTripletEmulator, process.ntuple)
-process.schedule = cms.Schedule(process.dtc, process.TTTracksEmuWithTruth, process.pL1GTTInput, process.pL1TrackSelection, process.pPV, process.pPVemu,process.pL1TrackVertexAssociation, process.pL1TrackJets, process.pL1TrackJetsEmu,process.pL1TrackFastJets, process.pTkMET, process.pTkMETEmu, process.pTkMHT, process.pTkMHTEmulator,process.pL1TrackTripletEmulator, process.ntuple)
+process.schedule = cms.Schedule(process.TTClusterStub, process.TTClusterStubTruth, process.dtc, process.TTTracksEmuWithTruth, process.pL1GTTInput, process.pL1TrackSelection, process.pPV, process.pPVemu,process.pL1TrackVertexAssociation, process.pL1TrackJets, process.pL1TrackJetsEmu,process.pL1TrackFastJets, process.pTkMET, process.pTkMETEmu, process.pTkMHT, process.pTkMHTEmulator,process.pL1TrackTripletEmulator,process.ntuple)
+
+if(runDispVert):
+    process.schedule.append(process.DispVert)
