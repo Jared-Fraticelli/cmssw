@@ -9,8 +9,44 @@
 #include "FWCore/ServiceRegistry/interface/ServiceToken.h"
 
 #include <cassert>
+#include <format>
 #include <memory>
+#include <string_view>
+#include <tuple>
 #include <vector>
+
+[[gnu::noinline]] std::tuple<int*, int> testReallocInner(int* ptr, int oldsize) {
+  int size = oldsize + 10;
+  ptr = static_cast<int*>(realloc(ptr, size * sizeof(int)));
+  for (int i = oldsize; i < size; ++i) {
+    ptr[i] = i * 2;
+  }
+
+  oldsize = size;
+  size = oldsize + 20;
+  ptr = static_cast<int*>(realloc(ptr, size * sizeof(int)));
+  for (int i = oldsize; i < size; ++i) {
+    ptr[i] = i * 3 - 42;
+  }
+  return std::tuple(ptr, size);
+}
+
+[[gnu::noinline]] std::tuple<int*, int> testRealloc() {
+  int size = 10;
+  int* ptr = static_cast<int*>(malloc(size * sizeof(int)));
+  for (int i = 0; i < size; ++i) {
+    ptr[i] = i + 10;
+  }
+  return testReallocInner(ptr, size);
+}
+
+[[gnu::noinline]] std::vector<int> nestedChurn() {
+  std::vector<int> vec;
+  for (int i = 0; i < 10000; ++i) {
+    vec.push_back(i * 3 - 5);
+  }
+  return vec;
+}
 
 int* nested() {
   edm::Service<edm::IntrusiveMonitorBase> imb;
@@ -25,14 +61,20 @@ std::atomic<int*> ptr2 = nullptr;
 std::atomic<int*> ptr3 = nullptr;
 std::atomic<int*> ptr4 = nullptr;
 
-int main() {
+int main(int argc, char** argv) {
   edmplugin::PluginManager::configure(edmplugin::standard::config());
 
-  std::string const config = R"_(
+  if (argc < 2) {
+    edm::LogProblem("Test").format("Need one argument for the intrusive monitor name");
+    return 1;
+  }
+
+  std::string const config = std::format(R"_(
 import FWCore.ParameterSet.Config as cms
 process = cms.Process('Test')
-process.add_(cms.Service('IntrusiveAllocMonitor'))
-)_";
+process.add_(cms.Service('{}'))
+)_",
+                                         argv[1]);
   std::unique_ptr<edm::ParameterSet> params;
   edm::makeParameterSets(config, params);
   auto token = edm::ServiceToken(edm::ServiceRegistry::createServicesFromConfig(std::move(params)));
@@ -141,6 +183,34 @@ process.add_(cms.Service('IntrusiveAllocMonitor'))
     edm::LogPrint("Test").format("Sum {}", sum);
   }
   edm::LogPrint("Test").format("====================");
+
+  edm::LogPrint("Test").format("Test nested churning");
+  {
+    int sum = 0;
+    {
+      auto guard = imb->startMonitoring("Nested churning");
+      auto vec = nestedChurn();
+      for (int a : vec) {
+        sum += a;
+      }
+    }
+    edm::LogPrint("Test").format("Sum {}", sum);
+  }
+  edm::LogPrint("Test").format("====================");
+
+  edm::LogPrint("Test").format("Test realloc");
+  {
+    int sum = 0;
+    {
+      auto guard = imb->startMonitoring("Realloc");
+      auto [rawPtr, size] = testRealloc();
+      for (int i = 0; i < size; ++i) {
+        sum += rawPtr[size];
+      }
+      free(rawPtr);
+    }
+    edm::LogPrint("Test").format("Sum {}", sum);
+  }
 
   return 0;
 }

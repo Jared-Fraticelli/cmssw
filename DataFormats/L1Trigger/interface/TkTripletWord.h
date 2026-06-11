@@ -13,14 +13,33 @@
 #include "DataFormats/L1TrackTrigger/interface/TTTrack_TrackWord.h"
 
 namespace l1t {
+  namespace io_v1 {
+    class TkTripletWord {
+    public:
+      // ----------constants, enums and typedefs ---------
+      static constexpr double MAX_MASS = 1000.;
+      static constexpr double MAX_ETA = 8.;
+      static constexpr double MAX_CHARGE = 3.;
+      static constexpr double MAX_Z0 = 25.;
 
-  class TkTripletWord {
-  public:
-    // ----------constants, enums and typedefs ---------
-    static constexpr double MAX_MASS = 1000.;
-    static constexpr double MAX_ETA = 8.;
-    static constexpr double MAX_CHARGE = 3.;
-    static constexpr double MAX_Z0 = 25.;
+      enum TkTripletBitWidths {
+        // The sizes of the triplet word components and total word size
+        kValidSize = 1,  // Width of the valid bit
+        kPtSize = 16,    // Width of the triplet pt
+        kPtMagSize = 11,
+        kGlbEtaSize = 14,          // Width of the triplet eta
+        kGlbPhiSize = 13,          // Width of the triplet phi
+        kMassSize = 16,            // Width of the triplet mass
+        kChargeSize = 3,           // Width of the triplet charge
+        kDiTrackMinMassSize = 16,  // Width of the mass of min mass pair
+        kDiTrackMaxMassSize = 16,  // Width of the mass of max mass pair
+        kDiTrackMinZ0Size = 8,     // Width of the Dz of min Dz pair
+        kDiTrackMaxZ0Size = 8,     // Width of the Dz of max Dz pair
+        kUnassignedSize = 17,
+        kTkTripletWordSize = kValidSize + kPtSize + kGlbEtaSize + kGlbPhiSize + kMassSize + kChargeSize +
+                             kDiTrackMinMassSize + kDiTrackMaxMassSize + kDiTrackMinZ0Size + kDiTrackMaxZ0Size +
+                             kUnassignedSize,
+      };
 
     enum TkTripletBitWidths {
       kValidSize = 1,        // Width of the valid bit
@@ -99,16 +118,16 @@ namespace l1t {
                   tktriplet_charge_t charge,
                   tktriplet_unassigned_t unassigned);
 
-    ~TkTripletWord() {}
+      ~TkTripletWord() {}
 
-    // ----------copy constructor ----------------------
-    TkTripletWord(const TkTripletWord& word) { tkTripletWord_ = word.tkTripletWord_; }
+      // ----------copy constructor ----------------------
+      TkTripletWord(const TkTripletWord& word) { tkTripletWord_ = word.tkTripletWord_; }
 
-    // ----------operators -----------------------------
-    TkTripletWord& operator=(const TkTripletWord& word) {
-      tkTripletWord_ = word.tkTripletWord_;
-      return *this;
-    }
+      // ----------operators -----------------------------
+      TkTripletWord& operator=(const TkTripletWord& word) {
+        tkTripletWord_ = word.tkTripletWord_;
+        return *this;
+      }
 
     // ----------member functions (getters) ------------
     // These functions return arbitarary precision words (lists of bits) for each quantity
@@ -195,25 +214,26 @@ namespace l1t {
                           tktriplet_charge_t charge,
                           tktriplet_unassigned_t unassigned);
 
-    template <class packVarType>
-    inline void packIntoWord(unsigned int& currentOffset, unsigned int wordChunkSize, packVarType& packVar);
+      template <class packVarType>
+      inline void packIntoWord(unsigned int& currentOffset, unsigned int wordChunkSize, packVarType& packVar);
 
-  private:
-    // ----------private member functions --------------
-    double unpackSignedValue(unsigned int bits, unsigned int nBits, double lsb) const {
-      int isign = 1;
-      unsigned int digitized_maximum = (1 << nBits) - 1;
-      if (bits & (1 << (nBits - 1))) {  // check the sign
-        isign = -1;
-        bits = (1 << (nBits + 1)) - bits;  // if negative, flip everything for two's complement encoding
+    private:
+      // ----------private member functions --------------
+      double unpackSignedValue(unsigned int bits, unsigned int nBits, double lsb) const {
+        int isign = 1;
+        unsigned int digitized_maximum = (1 << nBits) - 1;
+        if (bits & (1 << (nBits - 1))) {  // check the sign
+          isign = -1;
+          bits = (1 << (nBits + 1)) - bits;  // if negative, flip everything for two's complement encoding
+        }
+        return (double(bits & digitized_maximum) + 0.5) * lsb * isign;
       }
-      return (double(bits & digitized_maximum) + 0.5) * lsb * isign;
-    }
 
-    // ----------member data ---------------------------
-    tktripletword_bs_t tkTripletWord_;
-  };
-
+      // ----------member data ---------------------------
+      tktripletword_bs_t tkTripletWord_;
+    };
+  }  // namespace io_v1
+  using TkTripletWord = io_v1::TkTripletWord;
   typedef std::vector<l1t::TkTripletWord> TkTripletWordCollection;
 
 }  // namespace l1t

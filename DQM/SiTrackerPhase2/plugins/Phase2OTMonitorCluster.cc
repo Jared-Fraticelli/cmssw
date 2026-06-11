@@ -24,7 +24,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
-#include "Geometry/CommonDetUnit/interface/PixelGeomDetUnit.h"
+#include "Geometry/CommonTopologies/interface/PixelGeomDetUnit.h"
 #include "DataFormats/Common/interface/DetSetVectorNew.h"
 #include "DataFormats/Common/interface/DetSetVector.h"
 #include "DataFormats/Common/interface/Handle.h"
@@ -193,8 +193,11 @@ void Phase2OTMonitorCluster::analyze(const edm::Event& iEvent, const edm::EventS
           }
           unsigned int ladder = tTopo_->tobRod(rawid);
           if (local_mes.PositionOfClusters_2SLadder[ladder] != nullptr) {
-            //Adapt module numbers from 1 to 24 into -12 to +12
-            int signedModule = module <= 12 ? module : -(module - 12);
+            int signedModule = module;
+            // CRACK has numbers 1 to 12 while Tracker has 1 to 24
+            // Adapt module numbers from 1 to 24 into -12 to +12
+            if (!crackOverview_)
+              signedModule = module <= 12 ? module - 13 : module - 12;
             local_mes.PositionOfClusters_2SLadder[ladder]->Fill(signedModule, topOrBottomColumn);
           }
           if (crackOverview_)

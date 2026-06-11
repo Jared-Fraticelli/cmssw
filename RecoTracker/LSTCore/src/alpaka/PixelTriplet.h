@@ -15,39 +15,74 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
+  // Pre-loaded pixel segment data, invariant across triplets for a given pixel segment.
+  // Hoisted to avoid redundant SoA loads through the pT3 function chain.
+  struct PixelSeedData {
+    float ptIn, px, py, pz, ptErr, etaErr;
+    float eta, phi;
+    float circleCenterX, circleCenterY, circleRadius;
+    float x_InLo, y_InLo, z_InLo, rt_InLo;  // pixel inner MD (pLSMD0)
+    float x_InUp, y_InUp, z_InUp, rt_InUp;  // pixel outer MD (pLSMD1)
+    float alpha_InLo;                       // pixel segment dPhiChange
+    int charge;
+  };
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE PixelSeedData loadPixelSeedData(PixelSeedsConst pixelSeeds,
+                                                                 PixelSegmentsConst pixelSegments,
+                                                                 MiniDoubletsConst mds,
+                                                                 SegmentsConst segments,
+                                                                 unsigned int pixelSegmentIndex,
+                                                                 unsigned int pixelSeedIndex) {
+    unsigned int pixelMD0 = segments.mdIndices()[pixelSegmentIndex][0];
+    unsigned int pixelMD1 = segments.mdIndices()[pixelSegmentIndex][1];
+    PixelSeedData pixelData;
+    pixelData.ptIn = pixelSeeds.ptIn()[pixelSeedIndex];
+    pixelData.px = pixelSeeds.px()[pixelSeedIndex];
+    pixelData.py = pixelSeeds.py()[pixelSeedIndex];
+    pixelData.pz = pixelSeeds.pz()[pixelSeedIndex];
+    pixelData.ptErr = pixelSeeds.ptErr()[pixelSeedIndex];
+    pixelData.etaErr = pixelSeeds.etaErr()[pixelSeedIndex];
+    pixelData.eta = pixelSeeds.eta()[pixelSeedIndex];
+    pixelData.phi = pixelSeeds.phi()[pixelSeedIndex];
+    pixelData.charge = pixelSeeds.charge()[pixelSeedIndex];
+    pixelData.circleCenterX = pixelSegments.circleCenterX()[pixelSeedIndex];
+    pixelData.circleCenterY = pixelSegments.circleCenterY()[pixelSeedIndex];
+    pixelData.circleRadius = pixelSegments.circleRadius()[pixelSeedIndex];
+    pixelData.x_InLo = mds.anchorX()[pixelMD0];
+    pixelData.y_InLo = mds.anchorY()[pixelMD0];
+    pixelData.z_InLo = mds.anchorZ()[pixelMD0];
+    pixelData.rt_InLo = mds.anchorRt()[pixelMD0];
+    pixelData.x_InUp = mds.anchorX()[pixelMD1];
+    pixelData.y_InUp = mds.anchorY()[pixelMD1];
+    pixelData.z_InUp = mds.anchorZ()[pixelMD1];
+    pixelData.rt_InUp = mds.anchorRt()[pixelMD1];
+    pixelData.alpha_InLo = __H2F(segments.dPhiChanges()[pixelSegmentIndex]);
+    return pixelData;
+  }
+
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runTripletDefaultAlgoPPBB(TAcc const& acc,
                                                                 ModulesConst modules,
-                                                                ObjectRangesConst ranges,
                                                                 MiniDoubletsConst mds,
                                                                 SegmentsConst segments,
-                                                                PixelSeedsConst pixelSeeds,
-                                                                uint16_t pixelModuleIndex,
-                                                                uint16_t outerInnerLowerModuleIndex,
-                                                                uint16_t outerOuterLowerModuleIndex,
-                                                                unsigned int innerSegmentIndex,
-                                                                unsigned int outerSegmentIndex,
-                                                                unsigned int firstMDIndex,
-                                                                unsigned int secondMDIndex,
-                                                                unsigned int thirdMDIndex,
-                                                                unsigned int fourthMDIndex,
+                                                                const PixelSeedData& pixelData,
+                                                                uint16_t segmentInnerModuleIndex,
+                                                                uint16_t segmentOuterModuleIndex,
+                                                                unsigned int segmentIndex,
+                                                                unsigned int segmentMD0Index,
+                                                                unsigned int segmentMD1Index,
                                                                 const float ptCut);
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runTripletDefaultAlgoPPEE(TAcc const& acc,
                                                                 ModulesConst modules,
-                                                                ObjectRangesConst ranges,
                                                                 MiniDoubletsConst mds,
                                                                 SegmentsConst segments,
-                                                                PixelSeedsConst pixelSeeds,
-                                                                uint16_t pixelModuleIndex,
-                                                                uint16_t outerInnerLowerModuleIndex,
-                                                                uint16_t outerOuterLowerModuleIndex,
-                                                                unsigned int innerSegmentIndex,
-                                                                unsigned int outerSegmentIndex,
-                                                                unsigned int firstMDIndex,
-                                                                unsigned int secondMDIndex,
-                                                                unsigned int thirdMDIndex,
-                                                                unsigned int fourthMDIndex,
+                                                                const PixelSeedData& pixelData,
+                                                                uint16_t segmentInnerModuleIndex,
+                                                                uint16_t segmentOuterModuleIndex,
+                                                                unsigned int segmentIndex,
+                                                                unsigned int segmentMD0Index,
+                                                                unsigned int segmentMD1Index,
                                                                 const float ptCut);
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addPixelTripletToMemory(MiniDoubletsConst mds,
@@ -124,59 +159,43 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelTrackletDefaultAlgopT3(TAcc const& acc,
                                                                      ModulesConst modules,
-                                                                     ObjectRangesConst ranges,
                                                                      MiniDoubletsConst mds,
                                                                      SegmentsConst segments,
-                                                                     PixelSeedsConst pixelSeeds,
-                                                                     uint16_t pixelLowerModuleIndex,
+                                                                     const PixelSeedData& pixelData,
                                                                      uint16_t outerInnerLowerModuleIndex,
                                                                      uint16_t outerOuterLowerModuleIndex,
-                                                                     unsigned int innerSegmentIndex,
                                                                      unsigned int outerSegmentIndex,
                                                                      const float ptCut) {
     short outerInnerLowerModuleSubdet = modules.subdets()[outerInnerLowerModuleIndex];
     short outerOuterLowerModuleSubdet = modules.subdets()[outerOuterLowerModuleIndex];
 
-    unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
-    unsigned int secondMDIndex = segments.mdIndices()[innerSegmentIndex][1];
-
-    unsigned int thirdMDIndex = segments.mdIndices()[outerSegmentIndex][0];
-    unsigned int fourthMDIndex = segments.mdIndices()[outerSegmentIndex][1];
+    unsigned int segmentMD0Index = segments.mdIndices()[outerSegmentIndex][0];
+    unsigned int segmentMD1Index = segments.mdIndices()[outerSegmentIndex][1];
 
     if (outerInnerLowerModuleSubdet == Barrel and
         (outerOuterLowerModuleSubdet == Barrel or outerOuterLowerModuleSubdet == Endcap)) {
       return runTripletDefaultAlgoPPBB(acc,
                                        modules,
-                                       ranges,
                                        mds,
                                        segments,
-                                       pixelSeeds,
-                                       pixelLowerModuleIndex,
+                                       pixelData,
                                        outerInnerLowerModuleIndex,
                                        outerOuterLowerModuleIndex,
-                                       innerSegmentIndex,
                                        outerSegmentIndex,
-                                       firstMDIndex,
-                                       secondMDIndex,
-                                       thirdMDIndex,
-                                       fourthMDIndex,
+                                       segmentMD0Index,
+                                       segmentMD1Index,
                                        ptCut);
     } else if (outerInnerLowerModuleSubdet == Endcap and outerOuterLowerModuleSubdet == Endcap) {
       return runTripletDefaultAlgoPPEE(acc,
                                        modules,
-                                       ranges,
                                        mds,
                                        segments,
-                                       pixelSeeds,
-                                       pixelLowerModuleIndex,
+                                       pixelData,
                                        outerInnerLowerModuleIndex,
                                        outerOuterLowerModuleIndex,
-                                       innerSegmentIndex,
                                        outerSegmentIndex,
-                                       firstMDIndex,
-                                       secondMDIndex,
-                                       thirdMDIndex,
-                                       fourthMDIndex,
+                                       segmentMD0Index,
+                                       segmentMD1Index,
                                        ptCut);
     }
     return false;
@@ -483,7 +502,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const int moduleSubdet = modules.subdets()[lowerModuleIndex];
 
       // calculation is detailed documented here https://indico.cern.ch/event/1185895/contributions/4982756/attachments/2526561/4345805/helix%20pT3%20summarize.pdf
-      float diffr, diffz;
+      float diffr = 0.f;
+      float diffz = 0.f;
       float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
 
       float rou = a / p;
@@ -536,13 +556,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <typename WP = dnn::pt3dnn::pT3WP, alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelTripletDefaultAlgo(TAcc const& acc,
                                                                  ModulesConst modules,
-                                                                 ObjectRangesConst ranges,
                                                                  MiniDoubletsConst mds,
                                                                  SegmentsConst segments,
-                                                                 PixelSeedsConst pixelSeeds,
-                                                                 PixelSegmentsConst pixelSegments,
+                                                                 const PixelSeedData& pixelData,
                                                                  TripletsConst triplets,
-                                                                 unsigned int pixelSegmentIndex,
                                                                  unsigned int tripletIndex,
                                                                  float& pixelRadius,
                                                                  float& tripletRadius,
@@ -555,63 +572,47 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                  const float ptCut,
                                                                  bool runDNN = true,
                                                                  bool runChiSquaredCuts = true) {
-    //run pT4 compatibility between the pixel segment and inner segment, and between the pixel and outer segment of the triplet
-    uint16_t pixelModuleIndex = segments.innerLowerModuleIndices()[pixelSegmentIndex];
-
     uint16_t lowerModuleIndex = triplets.lowerModuleIndices()[tripletIndex][0];
     uint16_t middleModuleIndex = triplets.lowerModuleIndices()[tripletIndex][1];
     uint16_t upperModuleIndex = triplets.lowerModuleIndices()[tripletIndex][2];
 
-    {
-      // pixel segment vs inner segment of the triplet
-      if (not runPixelTrackletDefaultAlgopT3(acc,
-                                             modules,
-                                             ranges,
-                                             mds,
-                                             segments,
-                                             pixelSeeds,
-                                             pixelModuleIndex,
-                                             lowerModuleIndex,
-                                             middleModuleIndex,
-                                             pixelSegmentIndex,
-                                             triplets.segmentIndices()[tripletIndex][0],
-                                             ptCut))
-        return false;
+    // Cheap radius check first, before expensive tracklet compatibility checks.
+    pixelRadius = pixelData.ptIn * kR1GeVf;
+    pixelRadiusError = pixelData.ptErr * kR1GeVf;
+    tripletRadius = triplets.radius()[tripletIndex];
 
-      //pixel segment vs outer segment of triplet
-      if (not runPixelTrackletDefaultAlgopT3(acc,
-                                             modules,
-                                             ranges,
-                                             mds,
-                                             segments,
-                                             pixelSeeds,
-                                             pixelModuleIndex,
-                                             middleModuleIndex,
-                                             upperModuleIndex,
-                                             pixelSegmentIndex,
-                                             triplets.segmentIndices()[tripletIndex][1],
-                                             ptCut))
-        return false;
-    }
+    if (not passRadiusCriterion(acc,
+                                modules,
+                                pixelRadius,
+                                pixelRadiusError,
+                                tripletRadius,
+                                lowerModuleIndex,
+                                middleModuleIndex,
+                                upperModuleIndex))
+      return false;
 
-    //pt matching between the pixel ptin and the triplet circle pt
-    unsigned int pixelSegmentArrayIndex = pixelSegmentIndex - ranges.segmentModuleIndices()[pixelModuleIndex];
-    float pixelSegmentPt = pixelSeeds.ptIn()[pixelSegmentArrayIndex];
-    float pixelSegmentPtError = pixelSeeds.ptErr()[pixelSegmentArrayIndex];
-    float pixelSegmentPx = pixelSeeds.px()[pixelSegmentArrayIndex];
-    float pixelSegmentPy = pixelSeeds.py()[pixelSegmentArrayIndex];
-    float pixelSegmentPz = pixelSeeds.pz()[pixelSegmentArrayIndex];
-    int pixelSegmentCharge = pixelSeeds.charge()[pixelSegmentArrayIndex];
+    if (not runPixelTrackletDefaultAlgopT3(acc,
+                                           modules,
+                                           mds,
+                                           segments,
+                                           pixelData,
+                                           lowerModuleIndex,
+                                           middleModuleIndex,
+                                           triplets.segmentIndices()[tripletIndex][0],
+                                           ptCut))
+      return false;
 
-    float pixelG = pixelSegments.circleCenterX()[pixelSegmentArrayIndex];
-    float pixelF = pixelSegments.circleCenterY()[pixelSegmentArrayIndex];
-    float pixelRadiusPCA = pixelSegments.circleRadius()[pixelSegmentArrayIndex];
+    if (not runPixelTrackletDefaultAlgopT3(acc,
+                                           modules,
+                                           mds,
+                                           segments,
+                                           pixelData,
+                                           middleModuleIndex,
+                                           upperModuleIndex,
+                                           triplets.segmentIndices()[tripletIndex][1],
+                                           ptCut))
+      return false;
 
-    unsigned int pixelInnerMDIndex = segments.mdIndices()[pixelSegmentIndex][0];
-    unsigned int pixelOuterMDIndex = segments.mdIndices()[pixelSegmentIndex][1];
-
-    pixelRadius = pixelSegmentPt * kR1GeVf;
-    pixelRadiusError = pixelSegmentPtError * kR1GeVf;
     unsigned int tripletInnerSegmentIndex = triplets.segmentIndices()[tripletIndex][0];
     unsigned int tripletOuterSegmentIndex = triplets.segmentIndices()[tripletIndex][1];
 
@@ -624,20 +625,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float ys[Params_T3::kLayers] = {
         mds.anchorY()[firstMDIndex], mds.anchorY()[secondMDIndex], mds.anchorY()[thirdMDIndex]};
 
-    float g, f;
-    tripletRadius = triplets.radius()[tripletIndex];
-    g = triplets.centerX()[tripletIndex];
-    f = triplets.centerY()[tripletIndex];
-
-    if (not passRadiusCriterion(acc,
-                                modules,
-                                pixelRadius,
-                                pixelRadiusError,
-                                tripletRadius,
-                                lowerModuleIndex,
-                                middleModuleIndex,
-                                upperModuleIndex))
-      return false;
+    float g = triplets.centerX()[tripletIndex];
+    float f = triplets.centerY()[tripletIndex];
 
     uint16_t lowerModuleIndices[Params_T3::kLayers] = {lowerModuleIndex, middleModuleIndex, upperModuleIndex};
 
@@ -646,10 +635,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           mds.anchorRt()[firstMDIndex], mds.anchorRt()[secondMDIndex], mds.anchorRt()[thirdMDIndex]};
       float zs[Params_T3::kLayers] = {
           mds.anchorZ()[firstMDIndex], mds.anchorZ()[secondMDIndex], mds.anchorZ()[thirdMDIndex]};
-      float rtPix[Params_pLS::kLayers] = {mds.anchorRt()[pixelInnerMDIndex], mds.anchorRt()[pixelOuterMDIndex]};
-      float xPix[Params_pLS::kLayers] = {mds.anchorX()[pixelInnerMDIndex], mds.anchorX()[pixelOuterMDIndex]};
-      float yPix[Params_pLS::kLayers] = {mds.anchorY()[pixelInnerMDIndex], mds.anchorY()[pixelOuterMDIndex]};
-      float zPix[Params_pLS::kLayers] = {mds.anchorZ()[pixelInnerMDIndex], mds.anchorZ()[pixelOuterMDIndex]};
+      float rtPix[Params_pLS::kLayers] = {pixelData.rt_InLo, pixelData.rt_InUp};
+      float xPix[Params_pLS::kLayers] = {pixelData.x_InLo, pixelData.x_InUp};
+      float yPix[Params_pLS::kLayers] = {pixelData.y_InLo, pixelData.y_InUp};
+      float zPix[Params_pLS::kLayers] = {pixelData.z_InLo, pixelData.z_InUp};
 
       rzChiSquared = computePT3RZChiSquared(acc,
                                             modules,
@@ -662,18 +651,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                             xs,
                                             ys,
                                             zs,
-                                            pixelSegmentPt,
-                                            pixelSegmentPx,
-                                            pixelSegmentPy,
-                                            pixelSegmentPz,
-                                            pixelSegmentCharge);
-      if (runChiSquaredCuts && pixelSegmentPt < 5.0f) {
+                                            pixelData.ptIn,
+                                            pixelData.px,
+                                            pixelData.py,
+                                            pixelData.pz,
+                                            pixelData.charge);
+      if (runChiSquaredCuts && pixelData.ptIn < 5.0f) {
         if (!passPT3RZChiSquaredCuts(modules, lowerModuleIndex, middleModuleIndex, upperModuleIndex, rzChiSquared))
           return false;
       }
 
-      rPhiChiSquared =
-          computePT3RPhiChiSquared(acc, modules, lowerModuleIndices, pixelG, pixelF, pixelRadiusPCA, xs, ys);
+      rPhiChiSquared = computePT3RPhiChiSquared(acc,
+                                                modules,
+                                                lowerModuleIndices,
+                                                pixelData.circleCenterX,
+                                                pixelData.circleCenterY,
+                                                pixelData.circleRadius,
+                                                xs,
+                                                ys);
 
       rPhiChiSquaredInwards = computePT3RPhiChiSquaredInwards(g, f, tripletRadius, xPix, yPix);
     }
@@ -690,8 +685,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                   pixelRadius,
                                                   pixelRadiusError,
                                                   rzChiSquared,
-                                                  pixelSeeds.eta()[pixelSegmentArrayIndex],
-                                                  pixelSegmentPt,
+                                                  pixelData.eta,
+                                                  pixelData.ptIn,
                                                   module_type_3)) {
       return false;
     }
@@ -718,6 +713,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       for (unsigned int i_pLS : cms::alpakatools::uniform_elements_z(acc, nPixelSegments)) {
         auto iLSModule_max = connectedPixelIndex[i_pLS] + connectedPixelSize[i_pLS];
 
+        if (pixelSegments.isDup()[i_pLS])
+          continue;
+        if (pixelSegments.partOfPT5()[i_pLS])
+          continue;
+
+        // Hoist pixel segment data: loaded once per pixel segment instead of
+        // redundantly through the runPixelTripletDefaultAlgo call chain.
+        uint16_t pixelModuleIndex = modules.nLowerModules();
+        unsigned int pixelSegmentIndex = ranges.segmentModuleIndices()[pixelModuleIndex] + i_pLS;
+
+        PixelSeedData pixelData = loadPixelSeedData(pixelSeeds, pixelSegments, mds, segments, pixelSegmentIndex, i_pLS);
+
         for (unsigned int iLSModule :
              cms::alpakatools::uniform_elements_y(acc, connectedPixelIndex[i_pLS], iLSModule_max)) {
           uint16_t tripletLowerModuleIndex =
@@ -735,17 +742,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           if (modules.moduleType()[tripletLowerModuleIndex] == TwoS)
             continue;
 
-          uint16_t pixelModuleIndex = modules.nLowerModules();
           unsigned int nOuterTriplets = tripletsOccupancy.nTriplets()[tripletLowerModuleIndex];
           if (nOuterTriplets == 0)
             continue;
-
-          unsigned int pixelSegmentIndex = ranges.segmentModuleIndices()[pixelModuleIndex] + i_pLS;
-
-          if (pixelSegments.isDup()[i_pLS])
-            continue;
-          if (pixelSegments.partOfPT5()[i_pLS])
-            continue;  //don't make pT3s for those pixels that are part of pT5
 
           short layer2_adjustment;
           if (modules.layers()[tripletLowerModuleIndex] == 1) {
@@ -772,13 +771,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 pixelRadiusError;
             bool success = runPixelTripletDefaultAlgo(acc,
                                                       modules,
-                                                      ranges,
                                                       mds,
                                                       segments,
-                                                      pixelSeeds,
-                                                      pixelSegments,
+                                                      pixelData,
                                                       triplets,
-                                                      pixelSegmentIndex,
                                                       outerTripletIndex,
                                                       pixelRadius,
                                                       tripletRadius,
@@ -797,9 +793,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               float eta =
                   mds.anchorEta()[segments
                                       .mdIndices()[triplets.segmentIndices()[outerTripletIndex][0]][layer2_adjustment]];
-              float eta_pix = pixelSeeds.eta()[i_pLS];
-              float phi_pix = pixelSeeds.phi()[i_pLS];
-              float pt = pixelSeeds.ptIn()[i_pLS];
               float score = rPhiChiSquared + rPhiChiSquaredInwards;
               unsigned int totOccupancyPixelTriplets =
                   alpaka::atomicAdd(acc, &pixelTriplets.totOccupancyPixelTriplets(), 1u, alpaka::hierarchy::Threads{});
@@ -824,11 +817,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                         rPhiChiSquaredInwards,
                                         rzChiSquared,
                                         pixelTripletIndex,
-                                        pt,
+                                        pixelData.ptIn,
                                         eta,
                                         phi,
-                                        eta_pix,
-                                        phi_pix,
+                                        pixelData.eta,
+                                        pixelData.phi,
                                         pixelRadiusError,
                                         score);
                 triplets.partOfPT3()[outerTripletIndex] = true;
@@ -843,55 +836,46 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runTripletDefaultAlgoPPBB(TAcc const& acc,
                                                                 ModulesConst modules,
-                                                                ObjectRangesConst ranges,
                                                                 MiniDoubletsConst mds,
                                                                 SegmentsConst segments,
-                                                                PixelSeedsConst pixelSeeds,
-                                                                uint16_t pixelModuleIndex,
-                                                                uint16_t outerInnerLowerModuleIndex,
-                                                                uint16_t outerOuterLowerModuleIndex,
-                                                                unsigned int innerSegmentIndex,
-                                                                unsigned int outerSegmentIndex,
-                                                                unsigned int firstMDIndex,
-                                                                unsigned int secondMDIndex,
-                                                                unsigned int thirdMDIndex,
-                                                                unsigned int fourthMDIndex,
+                                                                const PixelSeedData& pixelData,
+                                                                uint16_t segmentInnerModuleIndex,
+                                                                uint16_t segmentOuterModuleIndex,
+                                                                unsigned int segmentIndex,
+                                                                unsigned int segmentMD0Index,
+                                                                unsigned int segmentMD1Index,
                                                                 const float ptCut) {
     float dPhi, betaIn, betaOut, pt_beta, zLo, zHi, zLoPointed, zHiPointed, dPhiCut, betaOutCut;
 
-    bool isPS_OutLo = (modules.moduleType()[outerInnerLowerModuleIndex] == PS);
+    bool isPS_OutLo = (modules.moduleType()[segmentInnerModuleIndex] == PS);
 
-    float rt_InLo = mds.anchorRt()[firstMDIndex];
-    float rt_InUp = mds.anchorRt()[secondMDIndex];
-    float rt_OutLo = mds.anchorRt()[thirdMDIndex];
-    float rt_OutUp = mds.anchorRt()[fourthMDIndex];
+    const float rt_InLo = pixelData.rt_InLo;
+    const float rt_InUp = pixelData.rt_InUp;
+    float rt_OutLo = mds.anchorRt()[segmentMD0Index];
+    float rt_OutUp = mds.anchorRt()[segmentMD1Index];
 
-    float z_InUp = mds.anchorZ()[secondMDIndex];
-    float z_OutLo = mds.anchorZ()[thirdMDIndex];
+    const float z_InUp = pixelData.z_InUp;
+    float z_OutLo = mds.anchorZ()[segmentMD0Index];
 
-    float x_InLo = mds.anchorX()[firstMDIndex];
-    float x_InUp = mds.anchorX()[secondMDIndex];
-    float x_OutLo = mds.anchorX()[thirdMDIndex];
-    float x_OutUp = mds.anchorX()[fourthMDIndex];
+    const float x_InLo = pixelData.x_InLo;
+    const float x_InUp = pixelData.x_InUp;
+    float x_OutLo = mds.anchorX()[segmentMD0Index];
+    float x_OutUp = mds.anchorX()[segmentMD1Index];
 
-    float y_InLo = mds.anchorY()[firstMDIndex];
-    float y_InUp = mds.anchorY()[secondMDIndex];
-    float y_OutLo = mds.anchorY()[thirdMDIndex];
-    float y_OutUp = mds.anchorY()[fourthMDIndex];
+    const float y_InLo = pixelData.y_InLo;
+    const float y_InUp = pixelData.y_InUp;
+    float y_OutLo = mds.anchorY()[segmentMD0Index];
+    float y_OutUp = mds.anchorY()[segmentMD1Index];
 
     float rt_InOut = rt_InUp;
 
-    if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, x_InUp, y_InUp, x_OutLo, y_OutLo)) > kPi / 2.f)
-      return false;
-
-    unsigned int pixelSegmentArrayIndex = innerSegmentIndex - ranges.segmentModuleIndices()[pixelModuleIndex];
-    float ptIn = pixelSeeds.ptIn()[pixelSegmentArrayIndex];
+    float ptIn = pixelData.ptIn;
     float ptSLo = ptIn;
-    float px = pixelSeeds.px()[pixelSegmentArrayIndex];
-    float py = pixelSeeds.py()[pixelSegmentArrayIndex];
-    float pz = pixelSeeds.pz()[pixelSegmentArrayIndex];
-    float ptErr = pixelSeeds.ptErr()[pixelSegmentArrayIndex];
-    float etaErr = pixelSeeds.etaErr()[pixelSegmentArrayIndex];
+    float px = pixelData.px;
+    float py = pixelData.py;
+    float pz = pixelData.pz;
+    float ptErr = pixelData.ptErr;
+    float etaErr = pixelData.etaErr;
     ptSLo = alpaka::math::max(acc, ptCut, ptSLo - 10.0f * alpaka::math::max(acc, ptErr, 0.005f * ptSLo));
     ptSLo = alpaka::math::min(acc, 10.0f, ptSLo);
 
@@ -962,11 +946,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //lots of array accesses below this...
 
-    float alpha_InLo = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
-    float alpha_OutLo = __H2F(segments.dPhiChanges()[outerSegmentIndex]);
+    float alpha_InLo = pixelData.alpha_InLo;
+    float alpha_OutLo = __H2F(segments.dPhiChanges()[segmentIndex]);
 
-    bool isEC_lastLayer = modules.subdets()[outerOuterLowerModuleIndex] == Endcap and
-                          modules.moduleType()[outerOuterLowerModuleIndex] == TwoS;
+    bool isEC_lastLayer =
+        modules.subdets()[segmentOuterModuleIndex] == Endcap and modules.moduleType()[segmentOuterModuleIndex] == TwoS;
 
     float alpha_OutUp, alpha_OutUp_highEdge, alpha_OutUp_lowEdge;
     alpha_OutUp = cms::alpakatools::deltaPhi(acc, x_OutUp, y_OutUp, x_OutUp - x_OutLo, y_OutUp - y_OutLo);
@@ -994,29 +978,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     if (isEC_lastLayer) {
       alpha_OutUp_highEdge = cms::alpakatools::deltaPhi(acc,
-                                                        mds.anchorHighEdgeX()[fourthMDIndex],
-                                                        mds.anchorHighEdgeY()[fourthMDIndex],
-                                                        mds.anchorHighEdgeX()[fourthMDIndex] - x_OutLo,
-                                                        mds.anchorHighEdgeY()[fourthMDIndex] - y_OutLo);
+                                                        mds.anchorHighEdgeX()[segmentMD1Index],
+                                                        mds.anchorHighEdgeY()[segmentMD1Index],
+                                                        mds.anchorHighEdgeX()[segmentMD1Index] - x_OutLo,
+                                                        mds.anchorHighEdgeY()[segmentMD1Index] - y_OutLo);
       alpha_OutUp_lowEdge = cms::alpakatools::deltaPhi(acc,
-                                                       mds.anchorLowEdgeX()[fourthMDIndex],
-                                                       mds.anchorLowEdgeY()[fourthMDIndex],
-                                                       mds.anchorLowEdgeX()[fourthMDIndex] - x_OutLo,
-                                                       mds.anchorLowEdgeY()[fourthMDIndex] - y_OutLo);
+                                                       mds.anchorLowEdgeX()[segmentMD1Index],
+                                                       mds.anchorLowEdgeY()[segmentMD1Index],
+                                                       mds.anchorLowEdgeX()[segmentMD1Index] - x_OutLo,
+                                                       mds.anchorLowEdgeY()[segmentMD1Index] - y_OutLo);
 
-      tl_axis_highEdge_x = mds.anchorHighEdgeX()[fourthMDIndex] - x_InUp;
-      tl_axis_highEdge_y = mds.anchorHighEdgeY()[fourthMDIndex] - y_InUp;
-      tl_axis_lowEdge_x = mds.anchorLowEdgeX()[fourthMDIndex] - x_InUp;
-      tl_axis_lowEdge_y = mds.anchorLowEdgeY()[fourthMDIndex] - y_InUp;
+      tl_axis_highEdge_x = mds.anchorHighEdgeX()[segmentMD1Index] - x_InUp;
+      tl_axis_highEdge_y = mds.anchorHighEdgeY()[segmentMD1Index] - y_InUp;
+      tl_axis_lowEdge_x = mds.anchorLowEdgeX()[segmentMD1Index] - x_InUp;
+      tl_axis_lowEdge_y = mds.anchorLowEdgeY()[segmentMD1Index] - y_InUp;
 
       betaOutRHmin = -alpha_OutUp_highEdge + cms::alpakatools::deltaPhi(acc,
-                                                                        mds.anchorHighEdgeX()[fourthMDIndex],
-                                                                        mds.anchorHighEdgeY()[fourthMDIndex],
+                                                                        mds.anchorHighEdgeX()[segmentMD1Index],
+                                                                        mds.anchorHighEdgeY()[segmentMD1Index],
                                                                         tl_axis_highEdge_x,
                                                                         tl_axis_highEdge_y);
       betaOutRHmax = -alpha_OutUp_lowEdge + cms::alpakatools::deltaPhi(acc,
-                                                                       mds.anchorLowEdgeX()[fourthMDIndex],
-                                                                       mds.anchorLowEdgeY()[fourthMDIndex],
+                                                                       mds.anchorLowEdgeX()[segmentMD1Index],
+                                                                       mds.anchorLowEdgeY()[segmentMD1Index],
                                                                        tl_axis_lowEdge_x,
                                                                        tl_axis_lowEdge_y);
     }
@@ -1071,13 +1055,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float dBetaROut = 0;
     if (isEC_lastLayer) {
-      dBetaROut = (alpaka::math::sqrt(acc,
-                                      mds.anchorHighEdgeX()[fourthMDIndex] * mds.anchorHighEdgeX()[fourthMDIndex] +
-                                          mds.anchorHighEdgeY()[fourthMDIndex] * mds.anchorHighEdgeY()[fourthMDIndex]) -
-                   alpaka::math::sqrt(acc,
-                                      mds.anchorLowEdgeX()[fourthMDIndex] * mds.anchorLowEdgeX()[fourthMDIndex] +
-                                          mds.anchorLowEdgeY()[fourthMDIndex] * mds.anchorLowEdgeY()[fourthMDIndex])) *
-                  sinDPhi / drt_tl_axis;
+      dBetaROut =
+          (alpaka::math::sqrt(acc,
+                              mds.anchorHighEdgeX()[segmentMD1Index] * mds.anchorHighEdgeX()[segmentMD1Index] +
+                                  mds.anchorHighEdgeY()[segmentMD1Index] * mds.anchorHighEdgeY()[segmentMD1Index]) -
+           alpaka::math::sqrt(acc,
+                              mds.anchorLowEdgeX()[segmentMD1Index] * mds.anchorLowEdgeX()[segmentMD1Index] +
+                                  mds.anchorLowEdgeY()[segmentMD1Index] * mds.anchorLowEdgeY()[segmentMD1Index])) *
+          sinDPhi / drt_tl_axis;
     }
 
     const float dBetaROut2 = dBetaROut * dBetaROut;
@@ -1102,54 +1087,47 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runTripletDefaultAlgoPPEE(TAcc const& acc,
                                                                 ModulesConst modules,
-                                                                ObjectRangesConst ranges,
                                                                 MiniDoubletsConst mds,
                                                                 SegmentsConst segments,
-                                                                PixelSeedsConst pixelSeeds,
-                                                                uint16_t pixelModuleIndex,
-                                                                uint16_t outerInnerLowerModuleIndex,
-                                                                uint16_t outerOuterLowerModuleIndex,
-                                                                unsigned int innerSegmentIndex,
-                                                                unsigned int outerSegmentIndex,
-                                                                unsigned int firstMDIndex,
-                                                                unsigned int secondMDIndex,
-                                                                unsigned int thirdMDIndex,
-                                                                unsigned int fourthMDIndex,
+                                                                const PixelSeedData& pixelData,
+                                                                uint16_t segmentInnerModuleIndex,
+                                                                uint16_t segmentOuterModuleIndex,
+                                                                unsigned int segmentIndex,
+                                                                unsigned int segmentMD0Index,
+                                                                unsigned int segmentMD1Index,
                                                                 const float ptCut) {
     float dPhi, betaIn, betaOut, pt_beta, rtLo, rtHi, dPhiCut, betaOutCut;
 
-    bool isPS_OutLo = (modules.moduleType()[outerInnerLowerModuleIndex] == PS);
+    bool isPS_OutLo = (modules.moduleType()[segmentInnerModuleIndex] == PS);
 
-    float z_InUp = mds.anchorZ()[secondMDIndex];
-    float z_OutLo = mds.anchorZ()[thirdMDIndex];
+    const float z_InUp = pixelData.z_InUp;
+    float z_OutLo = mds.anchorZ()[segmentMD0Index];
 
     if (z_InUp * z_OutLo <= 0)
       return false;
 
-    float rt_InLo = mds.anchorRt()[firstMDIndex];
-    float rt_InUp = mds.anchorRt()[secondMDIndex];
-    float rt_OutLo = mds.anchorRt()[thirdMDIndex];
-    float rt_OutUp = mds.anchorRt()[fourthMDIndex];
+    const float rt_InLo = pixelData.rt_InLo;
+    const float rt_InUp = pixelData.rt_InUp;
+    float rt_OutLo = mds.anchorRt()[segmentMD0Index];
+    float rt_OutUp = mds.anchorRt()[segmentMD1Index];
 
-    float x_InLo = mds.anchorX()[firstMDIndex];
-    float x_InUp = mds.anchorX()[secondMDIndex];
-    float x_OutLo = mds.anchorX()[thirdMDIndex];
-    float x_OutUp = mds.anchorX()[fourthMDIndex];
+    const float x_InLo = pixelData.x_InLo;
+    const float x_InUp = pixelData.x_InUp;
+    float x_OutLo = mds.anchorX()[segmentMD0Index];
+    float x_OutUp = mds.anchorX()[segmentMD1Index];
 
-    float y_InLo = mds.anchorY()[firstMDIndex];
-    float y_InUp = mds.anchorY()[secondMDIndex];
-    float y_OutLo = mds.anchorY()[thirdMDIndex];
-    float y_OutUp = mds.anchorY()[fourthMDIndex];
+    const float y_InLo = pixelData.y_InLo;
+    const float y_InUp = pixelData.y_InUp;
+    float y_OutLo = mds.anchorY()[segmentMD0Index];
+    float y_OutUp = mds.anchorY()[segmentMD1Index];
 
-    unsigned int pixelSegmentArrayIndex = innerSegmentIndex - ranges.segmentModuleIndices()[pixelModuleIndex];
-
-    float ptIn = pixelSeeds.ptIn()[pixelSegmentArrayIndex];
+    float ptIn = pixelData.ptIn;
     float ptSLo = ptIn;
-    float px = pixelSeeds.px()[pixelSegmentArrayIndex];
-    float py = pixelSeeds.py()[pixelSegmentArrayIndex];
-    float pz = pixelSeeds.pz()[pixelSegmentArrayIndex];
-    float ptErr = pixelSeeds.ptErr()[pixelSegmentArrayIndex];
-    float etaErr = pixelSeeds.etaErr()[pixelSegmentArrayIndex];
+    float px = pixelData.px;
+    float py = pixelData.py;
+    float pz = pixelData.pz;
+    float ptErr = pixelData.ptErr;
+    float etaErr = pixelData.etaErr;
 
     ptSLo = alpaka::math::max(acc, ptCut, ptSLo - 10.0f * alpaka::math::max(acc, ptErr, 0.005f * ptSLo));
     ptSLo = alpaka::math::min(acc, 10.0f, ptSLo);
@@ -1162,7 +1140,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dzDrtScale = alpaka::math::tan(acc, slope) / slope;  //FIXME: need approximate value
 
     const float dLum = alpaka::math::copysign(acc, kDeltaZLum, z_InUp);
-    bool isOutSgInnerMDPS = modules.moduleType()[outerInnerLowerModuleIndex] == PS;
+    bool isOutSgInnerMDPS = modules.moduleType()[segmentInnerModuleIndex] == PS;
 
     const float rtGeom1 = isOutSgInnerMDPS
                               ? kPixelPSZpitch
@@ -1225,11 +1203,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (alpaka::math::abs(acc, dPhi) > dPhiCut)
       return false;
 
-    float alpha_InLo = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
-    float alpha_OutLo = __H2F(segments.dPhiChanges()[outerSegmentIndex]);
+    float alpha_InLo = pixelData.alpha_InLo;
+    float alpha_OutLo = __H2F(segments.dPhiChanges()[segmentIndex]);
 
-    bool isEC_lastLayer = modules.subdets()[outerOuterLowerModuleIndex] == Endcap and
-                          modules.moduleType()[outerOuterLowerModuleIndex] == TwoS;
+    bool isEC_lastLayer =
+        modules.subdets()[segmentOuterModuleIndex] == Endcap and modules.moduleType()[segmentOuterModuleIndex] == TwoS;
 
     float alpha_OutUp, alpha_OutUp_highEdge, alpha_OutUp_lowEdge;
 
@@ -1256,29 +1234,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     if (isEC_lastLayer) {
       alpha_OutUp_highEdge = cms::alpakatools::deltaPhi(acc,
-                                                        mds.anchorHighEdgeX()[fourthMDIndex],
-                                                        mds.anchorHighEdgeY()[fourthMDIndex],
-                                                        mds.anchorHighEdgeX()[fourthMDIndex] - x_OutLo,
-                                                        mds.anchorHighEdgeY()[fourthMDIndex] - y_OutLo);
+                                                        mds.anchorHighEdgeX()[segmentMD1Index],
+                                                        mds.anchorHighEdgeY()[segmentMD1Index],
+                                                        mds.anchorHighEdgeX()[segmentMD1Index] - x_OutLo,
+                                                        mds.anchorHighEdgeY()[segmentMD1Index] - y_OutLo);
       alpha_OutUp_lowEdge = cms::alpakatools::deltaPhi(acc,
-                                                       mds.anchorLowEdgeX()[fourthMDIndex],
-                                                       mds.anchorLowEdgeY()[fourthMDIndex],
-                                                       mds.anchorLowEdgeX()[fourthMDIndex] - x_OutLo,
-                                                       mds.anchorLowEdgeY()[fourthMDIndex] - y_OutLo);
+                                                       mds.anchorLowEdgeX()[segmentMD1Index],
+                                                       mds.anchorLowEdgeY()[segmentMD1Index],
+                                                       mds.anchorLowEdgeX()[segmentMD1Index] - x_OutLo,
+                                                       mds.anchorLowEdgeY()[segmentMD1Index] - y_OutLo);
 
-      tl_axis_highEdge_x = mds.anchorHighEdgeX()[fourthMDIndex] - x_InUp;
-      tl_axis_highEdge_y = mds.anchorHighEdgeY()[fourthMDIndex] - y_InUp;
-      tl_axis_lowEdge_x = mds.anchorLowEdgeX()[fourthMDIndex] - x_InUp;
-      tl_axis_lowEdge_y = mds.anchorLowEdgeY()[fourthMDIndex] - y_InUp;
+      tl_axis_highEdge_x = mds.anchorHighEdgeX()[segmentMD1Index] - x_InUp;
+      tl_axis_highEdge_y = mds.anchorHighEdgeY()[segmentMD1Index] - y_InUp;
+      tl_axis_lowEdge_x = mds.anchorLowEdgeX()[segmentMD1Index] - x_InUp;
+      tl_axis_lowEdge_y = mds.anchorLowEdgeY()[segmentMD1Index] - y_InUp;
 
       betaOutRHmin = -alpha_OutUp_highEdge + cms::alpakatools::deltaPhi(acc,
-                                                                        mds.anchorHighEdgeX()[fourthMDIndex],
-                                                                        mds.anchorHighEdgeY()[fourthMDIndex],
+                                                                        mds.anchorHighEdgeX()[segmentMD1Index],
+                                                                        mds.anchorHighEdgeY()[segmentMD1Index],
                                                                         tl_axis_highEdge_x,
                                                                         tl_axis_highEdge_y);
       betaOutRHmax = -alpha_OutUp_lowEdge + cms::alpakatools::deltaPhi(acc,
-                                                                       mds.anchorLowEdgeX()[fourthMDIndex],
-                                                                       mds.anchorLowEdgeY()[fourthMDIndex],
+                                                                       mds.anchorLowEdgeX()[segmentMD1Index],
+                                                                       mds.anchorLowEdgeY()[segmentMD1Index],
                                                                        tl_axis_lowEdge_x,
                                                                        tl_axis_lowEdge_y);
     }
@@ -1332,21 +1310,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float dBetaROut = 0;
     if (isEC_lastLayer) {
-      dBetaROut = (alpaka::math::sqrt(acc,
-                                      mds.anchorHighEdgeX()[fourthMDIndex] * mds.anchorHighEdgeX()[fourthMDIndex] +
-                                          mds.anchorHighEdgeY()[fourthMDIndex] * mds.anchorHighEdgeY()[fourthMDIndex]) -
-                   alpaka::math::sqrt(acc,
-                                      mds.anchorLowEdgeX()[fourthMDIndex] * mds.anchorLowEdgeX()[fourthMDIndex] +
-                                          mds.anchorLowEdgeY()[fourthMDIndex] * mds.anchorLowEdgeY()[fourthMDIndex])) *
-                  sinDPhi / drt_tl_axis;
+      dBetaROut =
+          (alpaka::math::sqrt(acc,
+                              mds.anchorHighEdgeX()[segmentMD1Index] * mds.anchorHighEdgeX()[segmentMD1Index] +
+                                  mds.anchorHighEdgeY()[segmentMD1Index] * mds.anchorHighEdgeY()[segmentMD1Index]) -
+           alpaka::math::sqrt(acc,
+                              mds.anchorLowEdgeX()[segmentMD1Index] * mds.anchorLowEdgeX()[segmentMD1Index] +
+                                  mds.anchorLowEdgeY()[segmentMD1Index] * mds.anchorLowEdgeY()[segmentMD1Index])) *
+          sinDPhi / drt_tl_axis;
     }
 
     const float dBetaROut2 = dBetaROut * dBetaROut;
 
-    betaOutCut =
-        alpaka::math::asin(
-            acc, alpaka::math::min(acc, drt_tl_axis * k2Rinv1GeVf / ptCut, kSinAlphaMax))  //FIXME: need faster version
-        + (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
+    //FIXME: need faster version
+    betaOutCut = alpaka::math::asin(acc, alpaka::math::min(acc, drt_tl_axis * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
+                 (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
 
     //Cut #6: The real beta cut
     if (alpaka::math::abs(acc, betaOut) >= betaOutCut)

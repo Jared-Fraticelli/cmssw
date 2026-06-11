@@ -45,8 +45,8 @@
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
-#include "Geometry/CommonDetUnit/interface/GeomDetType.h"
-#include "Geometry/CommonDetUnit/interface/GeomDet.h"
+#include "Geometry/CommonTopologies/interface/GeomDetType.h"
+#include "Geometry/CommonTopologies/interface/GeomDet.h"
 
 #include "Geometry/CommonTopologies/interface/PixelGeomDetUnit.h"
 #include "Geometry/CommonTopologies/interface/PixelGeomDetType.h"
@@ -374,6 +374,7 @@ void L1TrackNtupleMaker::endJob() {
   delete m_trk_combinatoric;
   delete m_trk_fake;
   delete m_trk_MVA1;
+  delete m_trk_layers;
   delete m_trk_matchtp_pdgid;
   delete m_trk_matchtp_pt;
   delete m_trk_matchtp_eta;
@@ -431,6 +432,7 @@ void L1TrackNtupleMaker::endJob() {
   delete m_allstub_isBarrel;
   delete m_allstub_layer;
   delete m_allstub_isPSmodule;
+  delete m_allstub_isTiltedBarrel;
   delete m_allstub_trigDisplace;
   delete m_allstub_trigOffset;
   delete m_allstub_trigPos;
